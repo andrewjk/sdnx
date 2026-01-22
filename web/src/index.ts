@@ -1,3 +1,5 @@
+import check from "./check";
 import parse from "./parse";
+import parseSchema from "./parseSchema";
 
-export { parse };
+export { parseSchema, parse, check };

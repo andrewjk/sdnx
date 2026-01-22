@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "es2022",
 		"module": "esnext",
-		"lib": ["es2022"],
+		"lib": ["es2022", "DOM"],
 		"skipLibCheck": true,
 
 		/* Bundler mode */

@@ -1,4 +1,3 @@
-@schema(./employee.sdnx)
 {
 	active: true,
 	name: "Darren",
@@ -16,10 +15,6 @@
 		name: "Rocket",
 		age: 5,
 	}],
-	# commenting out a field comments out the whole thing
-	# commented_object: {
-		whatever: 5,
-	},
 	has_license: true,
 	license_num: "112",
 }
