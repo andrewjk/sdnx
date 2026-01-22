@@ -1,0 +1,28 @@
+{
+	"name": "sdnx",
+	"version": "1.0.0",
+	"description": "A format for specifying and validating data",
+	"type": "module",
+	"exports": {
+		"types": "./dist/index.d.mts",
+		"import": "./dist/index.mjs"
+	},
+	"scripts": {
+		"check": "tsgo --noEmit && pnpm dlx oxlint --type-aware",
+		"build": "tsgo --noEmit && tsdown",
+		"format": "prettier --write .",
+		"test": "vitest"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"packageManager": "pnpm@10.28.0",
+	"devDependencies": {
+		"@trivago/prettier-plugin-sort-imports": "^6.0.2",
+		"@typescript/native-preview": "7.0.0-dev.20260120.1",
+		"oxlint-tsgolint": "^0.11.1",
+		"tsdown": "0.20.0-beta.4",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.17"
+	}
+}
