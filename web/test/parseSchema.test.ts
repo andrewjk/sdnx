@@ -6,7 +6,7 @@ test("parse schema: basic test", () => {
 {
 	active: bool,
 	# a comment
-	name: string min(2),
+	name: string minlen(2),
 	age: int min(16),
 	rating: num max(5),	
 	## a description of this field
@@ -21,7 +21,7 @@ test("parse schema: basic test", () => {
 
 	const expected = {
 		active: { type: "bool" },
-		name: { type: "string", validators: { min: { raw: "2", required: 2 } } },
+		name: { type: "string", validators: { minlen: { raw: "2", required: 2 } } },
 		age: { type: "int", validators: { min: { raw: "16", required: 16 } } },
 		rating: { type: "num", validators: { max: { raw: "5", required: 5 } } },
 		skills: { type: "string", description: "a description of this field" },
@@ -48,7 +48,7 @@ test("parse schema: basic test spaced", () => {
 	const input = `
 {
 	active : bool ,
-	name : string min ( 2 ) ,
+	name : string minlen ( 2 ) ,
 	meeting_at : null | date ,
 	children : [ {
 		age : int ,
@@ -58,7 +58,7 @@ test("parse schema: basic test spaced", () => {
 
 	const expected = {
 		active: { type: "bool" },
-		name: { type: "string", validators: { min: { raw: "2", required: 2 } } },
+		name: { type: "string", validators: { minlen: { raw: "2", required: 2 } } },
 		meeting_at: { type: "union", inner: [{ type: "null" }, { type: "date" }] },
 		children: {
 			type: "array",
@@ -78,11 +78,11 @@ test("parse schema: basic test spaced", () => {
 });
 
 test("parse schema: basic test unspaced", () => {
-	const input = `{active:bool,name:string min(2),meeting_at:null|date,children:[{age:int,name:string,}]}`;
+	const input = `{active:bool,name:string minlen(2),meeting_at:null|date,children:[{age:int,name:string,}]}`;
 
 	const expected = {
 		active: { type: "bool" },
-		name: { type: "string", validators: { min: { raw: "2", required: 2 } } },
+		name: { type: "string", validators: { minlen: { raw: "2", required: 2 } } },
 		meeting_at: { type: "union", inner: [{ type: "null" }, { type: "date" }] },
 		children: {
 			type: "array",
@@ -195,7 +195,7 @@ test("parse schema: array type", () => {
 test("parse schema: mix macro", () => {
 	const input = `
 {
-	name: string min(2),
+	name: string minlen(2),
 	@mix({
 		age: int min(16),
 		rating: num max(5),
@@ -206,7 +206,7 @@ test("parse schema: mix macro", () => {
 	const expected = {
 		name: {
 			type: "string",
-			validators: { min: { raw: "2", required: 2 } },
+			validators: { minlen: { raw: "2", required: 2 } },
 		},
 		mix$1: {
 			type: "mix",
@@ -234,7 +234,7 @@ test("parse schema: mix macro", () => {
 test("parse schema: any macro", () => {
 	const input = `
 {
-	name: string min(2),
+	name: string minlen(2),
 	@any(): int min(16),
 	active: bool,
 }`;
@@ -242,7 +242,7 @@ test("parse schema: any macro", () => {
 	const expected = {
 		name: {
 			type: "string",
-			validators: { min: { raw: "2", required: 2 } },
+			validators: { minlen: { raw: "2", required: 2 } },
 		},
 		any$1: {
 			type: "",

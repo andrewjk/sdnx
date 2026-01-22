@@ -510,7 +510,7 @@ Error: 'rating' cannot be more than 5
 ### String validation
 
 ```````````````````````````````` example
-{ username: string min(3) }
+{ username: string minlen(3) }
 .
 { username: "ab" }
 .
@@ -518,7 +518,7 @@ Error: 'username' must be at least 3 characters
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ username: string max(20) }
+{ username: string maxlen(20) }
 .
 { username: "this_username_is_way_too_long" }
 .
@@ -526,13 +526,13 @@ Error: 'username' cannot be more than 20 characters
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ username: string min(3) max(20) }
+{ username: string minlen(3) maxlen(20) }
 .
 { username: "john" }
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ email: string regex(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i) }
+{ email: string pattern(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i) }
 .
 { email: "invalid-email" }
 .
@@ -540,7 +540,7 @@ Error: 'email' doesn't match pattern '/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ email: string regex(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i) }
+{ email: string pattern(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i) }
 .
 { email: "user@example.com" }
 ````````````````````````````````
@@ -735,8 +735,8 @@ A complex schema demonstrating multiple features together:
 ```````````````````````````````` example
 {
     ## User information
-    name: string min(2) max(50),
-    email: string regex(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i),
+    name: string minlen(2) maxlen(50),
+    email: string pattern(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i),
     
     ## User can be minor or adult
     @mix({

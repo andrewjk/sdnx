@@ -36,10 +36,10 @@ cd zig
 zig build
 
 # Run all tests
-zig build test
+zig build test -Denable_cache=off
 
 # Run single test
-zig build test -Denable_cache=off
+zig test path/to/test.zig
 ```
 
 ## Code Style Guidelines

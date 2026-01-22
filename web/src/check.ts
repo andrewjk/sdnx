@@ -1,5 +1,6 @@
 import { AnySchema } from "./types/AnySchema";
 import { ArraySchema } from "./types/ArraySchema";
+import { CheckError } from "./types/CheckError";
 import { FieldSchema } from "./types/FieldSchema";
 import { MixSchema } from "./types/MixSchema";
 import { ObjectSchema } from "./types/ObjectSchema";
@@ -14,12 +15,7 @@ interface CheckSuccess {
 
 interface CheckFailure {
 	ok: false;
-	errors: Error[];
-}
-
-export interface Error {
-	path: string[];
-	message: string;
+	errors: CheckError[];
 }
 
 // TODO:
@@ -32,7 +28,7 @@ export default function check(
 	input: Record<PropertyKey, unknown>,
 	schema: Schema,
 ): CheckSuccess | CheckFailure {
-	let errors: Error[] = [];
+	let errors: CheckError[] = [];
 
 	checkObjectSchemaInner(input, schema, errors);
 
@@ -46,7 +42,7 @@ export default function check(
 function checkObjectSchema(
 	input: Record<PropertyKey, unknown>,
 	schema: ObjectSchema,
-	errors: Error[],
+	errors: CheckError[],
 ): boolean {
 	return checkObjectSchemaInner(input, schema.inner, errors);
 }
@@ -54,7 +50,7 @@ function checkObjectSchema(
 function checkObjectSchemaInner(
 	input: Record<PropertyKey, unknown>,
 	schema: Schema,
-	errors: Error[],
+	errors: CheckError[],
 ): boolean {
 	let result = true;
 	for (let [field, fieldSchema] of Object.entries(schema)) {
@@ -79,7 +75,7 @@ function checkObjectSchemaInner(
 function checkArraySchema(
 	input: Record<PropertyKey, unknown>[],
 	schema: ArraySchema,
-	errors: Error[],
+	errors: CheckError[],
 ): boolean {
 	let result = true;
 	for (let [i, value] of input.entries()) {
@@ -90,8 +86,13 @@ function checkArraySchema(
 	return result;
 }
 
-function checkUnionSchema(value: unknown, schema: UnionSchema, field: string, errors: Error[]) {
-	let fieldErrors: Error[] = [];
+function checkUnionSchema(
+	value: unknown,
+	schema: UnionSchema,
+	field: string,
+	errors: CheckError[],
+) {
+	let fieldErrors: CheckError[] = [];
 	let ok = false;
 	for (let fs of schema.inner) {
 		if (checkFieldSchema(value, fs, field, fieldErrors)) {
@@ -108,8 +109,12 @@ function checkUnionSchema(value: unknown, schema: UnionSchema, field: string, er
 	return ok;
 }
 
-function checkMixSchema(input: Record<PropertyKey, unknown>, schema: MixSchema, errors: Error[]) {
-	let fieldErrors: Error[] = [];
+function checkMixSchema(
+	input: Record<PropertyKey, unknown>,
+	schema: MixSchema,
+	errors: CheckError[],
+) {
+	let fieldErrors: CheckError[] = [];
 	let ok = false;
 	for (let fs of schema.inner) {
 		const mixResult = check(input, fs);
@@ -136,7 +141,7 @@ function checkAnySchema(
 	input: Record<PropertyKey, unknown>,
 	schema: AnySchema,
 	field: string,
-	errors: Error[],
+	errors: CheckError[],
 ) {
 	let result = true;
 	for (let [anyField, value] of Object.entries(input)) {
@@ -172,7 +177,7 @@ function checkFieldSchema(
 	value: unknown,
 	schema: SchemaValue,
 	field: string,
-	errors: Error[],
+	errors: CheckError[],
 ): boolean {
 	if (schema.type === "object") {
 		if (value === null || typeof value !== "object") {
@@ -203,7 +208,7 @@ function checkFieldSchemaValue(
 	value: unknown,
 	schema: FieldSchema,
 	field: string,
-	errors: Error[],
+	errors: CheckError[],
 ): boolean {
 	if (value === undefined && schema.type !== "undef") {
 		errors.push({

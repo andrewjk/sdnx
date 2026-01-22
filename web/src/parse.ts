@@ -19,9 +19,16 @@ export default function parse(input: string): Record<PropertyKey, any> {
 
 	trim(status);
 
-	while (accept("#", status)) {
-		parseComment(status);
-		trim(status);
+	while (true) {
+		if (accept("#", status)) {
+			parseComment(status);
+			trim(status);
+		} else if (accept("@", status)) {
+			parseMacro(status);
+			trim(status);
+		} else {
+			break;
+		}
 	}
 
 	if (accept("{", status)) {
@@ -151,5 +158,29 @@ function parseComment(status: Status) {
 		if (status.input[status.i] === "\n") {
 			break;
 		}
+	}
+}
+
+function parseMacro(status: Status) {
+	// Consume until space or `(`
+	const start = status.i;
+	while (/[^\s(]/.test(status.input[status.i])) {
+		status.i++;
+	}
+	const macro = status.input.substring(start, status.i);
+	trim(status);
+	expect("(", status);
+	switch (macro) {
+		case "schema":
+			trim(status);
+			// Consume until space or `)`
+			while (/[^\s)]/.test(status.input[status.i])) {
+				status.i++;
+			}
+			trim(status);
+			expect(")", status);
+			break;
+		default:
+			throw new Error(`Unknown macro: '${macro}'`);
 	}
 }

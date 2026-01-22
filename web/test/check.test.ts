@@ -489,7 +489,7 @@ test("check: union type in array invalid", () => {
 });
 
 test("check: string min length valid", () => {
-	const schemaInput = `{ name: string min(3) }`;
+	const schemaInput = `{ name: string minlen(3) }`;
 	const input = `{ name: "Alice" }`;
 
 	const obj = parse(input);
@@ -500,7 +500,7 @@ test("check: string min length valid", () => {
 });
 
 test("check: string min length invalid", () => {
-	const schemaInput = `{ name: string min(3) }`;
+	const schemaInput = `{ name: string minlen(3) }`;
 	const input = `{ name: "Al" }`;
 
 	const obj = parse(input);
@@ -515,7 +515,7 @@ test("check: string min length invalid", () => {
 });
 
 test("check: string max length valid", () => {
-	const schemaInput = `{ name: string max(10) }`;
+	const schemaInput = `{ name: string maxlen(10) }`;
 	const input = `{ name: "Alice" }`;
 
 	const obj = parse(input);
@@ -526,7 +526,7 @@ test("check: string max length valid", () => {
 });
 
 test("check: string max length invalid", () => {
-	const schemaInput = `{ name: string max(5) }`;
+	const schemaInput = `{ name: string maxlen(5) }`;
 	const input = `{ name: "Alexander" }`;
 
 	const obj = parse(input);
@@ -541,7 +541,7 @@ test("check: string max length invalid", () => {
 });
 
 test("check: string regex valid", () => {
-	const schemaInput = `{ email: string regex(/^[^@]+@[^@]+$/) }`;
+	const schemaInput = `{ email: string pattern(/^[^@]+@[^@]+$/) }`;
 	const input = `{ email: "user@example.com" }`;
 
 	const obj = parse(input);
@@ -552,7 +552,7 @@ test("check: string regex valid", () => {
 });
 
 test("check: string regex invalid", () => {
-	const schemaInput = `{ email: string regex(/^[^@]+@[^@]+$/) }`;
+	const schemaInput = `{ email: string pattern(/^[^@]+@[^@]+$/) }`;
 	const input = `{ email: "not-an-email" }`;
 
 	const obj = parse(input);
@@ -763,7 +763,7 @@ test("check: multiple validators on int invalid max", () => {
 });
 
 test("check: multiple validators on string", () => {
-	const schemaInput = `{ username: string min(3) max(20) regex(/^[a-z]+$/) }`;
+	const schemaInput = `{ username: string minlen(3) maxlen(20) pattern(/^[a-z]+$/) }`;
 	const input = `{ username: "alice" }`;
 
 	const obj = parse(input);
@@ -774,7 +774,7 @@ test("check: multiple validators on string", () => {
 });
 
 test("check: multiple validators on string invalid min", () => {
-	const schemaInput = `{ username: string min(3) max(20) regex(/^[a-z]+$/) }`;
+	const schemaInput = `{ username: string minlen(3) maxlen(20) pattern(/^[a-z]+$/) }`;
 	const input = `{ username: "al" }`;
 
 	const obj = parse(input);
@@ -789,7 +789,7 @@ test("check: multiple validators on string invalid min", () => {
 });
 
 test("check: multiple validators on string invalid regex", () => {
-	const schemaInput = `{ username: string min(3) max(20) regex(/^[a-z]+$/) }`;
+	const schemaInput = `{ username: string minlen(3) maxlen(20) pattern(/^[a-z]+$/) }`;
 	const input = `{ username: "Alice123" }`;
 
 	const obj = parse(input);

@@ -21,6 +21,11 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
+    const mvzr_dep = b.dependency("mvzr", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.
@@ -28,7 +33,7 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
-    const mod = b.addModule("zig", .{
+    const mod = b.addModule("sdn", .{
         // The root source file is the "entry point" of this module. Users of
         // this module will only be able to access public declarations contained
         // in this file, which means that if you have declarations that you
@@ -39,6 +44,10 @@ pub fn build(b: *std.Build) void {
         // Later on we'll use this module as the root module of a test executable
         // which requires us to specify a target.
         .target = target,
+        // Add mvzr module as a dependency
+        .imports = &.{
+            .{ .name = "mvzr", .module = mvzr_dep.module("mvzr") },
+        },
     });
 
     // Here we define an executable. An executable needs to have a root module
@@ -58,7 +67,7 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
     const exe = b.addExecutable(.{
-        .name = "zig",
+        .name = "sdn",
         .root_module = b.createModule(.{
             // b.createModule defines a new module just like b.addModule but,
             // unlike b.addModule, it does not expose the module to consumers of
@@ -78,7 +87,7 @@ pub fn build(b: *std.Build) void {
                 // repeated because you are allowed to rename your imports, which
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
-                .{ .name = "zig", .module = mod },
+                .{ .name = "sdn", .module = mod },
             },
         }),
     });
@@ -135,12 +144,27 @@ pub fn build(b: *std.Build) void {
     // A run step that will run the second test executable.
     const run_exe_tests = b.addRunArtifact(exe_tests);
 
+    // Creates a test executable for all.test.zig which imports other test files
+    const all_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/all.test.zig"),
+            .target = target,
+            .imports = &.{
+                .{ .name = "sdn", .module = mod },
+                .{ .name = "mvzr", .module = mvzr_dep.module("mvzr") },
+            },
+        }),
+    });
+
+    const run_all_tests = b.addRunArtifact(all_tests);
+
     // A top level step for running all tests. dependOn can be called multiple
-    // times and since the two run steps do not depend on one another, this will
-    // make the two of them run in parallel.
+    // times and since the run steps do not depend on one another, this will
+    // make all of them run in parallel.
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+    test_step.dependOn(&run_all_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //

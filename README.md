@@ -57,7 +57,7 @@ For example:
 {
 	active: bool,
 	# a comment
-	name: string min(2),
+	name: string minlen(2),
 	age: int min(16),
 	rating: num max(5),
 	## a description of this field
@@ -70,7 +70,7 @@ For example:
 	}],
 	@mix({
 		has_license: true,
-		license_num: string min(1),
+		license_num: string minlen(1),
 	} | {
 		has_license: false,
 	}),

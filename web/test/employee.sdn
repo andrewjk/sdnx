@@ -1,8 +1,9 @@
+@schema("./employee.sdnx")
 {
 	active: true,
 	name: "Darren",
 	age: 25,
-	rating: 4.2,
+	rating: "4.2",
 	# strings can be multiline
 	skills: "
 		very good at

@@ -1,0 +1,124 @@
+{
+  "scopeName": "source.sdn",
+  "name": "SDN",
+  "fileTypes": ["sdn"],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "match": "\\{|\\}",
+      "name": "punctuation.definition.block.sdn"
+    },
+    {
+      "match": "\\[|\\]",
+      "name": "punctuation.definition.array.sdn"
+    },
+    {
+      "match": ",",
+      "name": "punctuation.separator.sdn"
+    },
+    {
+      "match": ":",
+      "name": "punctuation.separator.key-value.sdn"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#dates"
+    },
+    {
+      "include": "#keys"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "#.*$",
+          "name": "comment.line.number-sign.sdn"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(true|false)\\b",
+          "name": "constant.language.boolean.sdn"
+        },
+        {
+          "match": "\\b(bool|int|float|string)\\b",
+          "name": "storage.type.sdn"
+        },
+        {
+          "match": "\\b(min|max)\\b",
+          "name": "keyword.function.sdn"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.sdn"
+            }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.sdn"
+            }
+          },
+          "name": "string.quoted.double.sdn",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.sdn"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b\\d+\\.\\d+\\b",
+          "name": "constant.numeric.float.sdn"
+        },
+        {
+          "match": "\\b\\d+\\b",
+          "name": "constant.numeric.integer.sdn"
+        }
+      ]
+    },
+    "dates": {
+      "patterns": [
+        {
+          "match": "\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}:?\\d{2})?\\b",
+          "name": "support.constant.date-time.sdn"
+        },
+        {
+          "match": "\\b\\d{4}-\\d{2}-\\d{2}\\b",
+          "name": "support.constant.date.sdn"
+        }
+      ]
+    },
+    "keys": {
+      "match": "(?<=^|\\s|\\{)([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*:)",
+      "captures": {
+        "1": {
+          "name": "entity.name.tag.sdn"
+        }
+      }
+    }
+  }
+}
