@@ -5,5 +5,5 @@ const Validator = @import("./Validator.zig").Validator;
 pub const FieldSchema = struct {
     type: []const u8,
     description: ?[]const u8 = null,
-    validators: ?std.StringHashMap(Validator) = null,
+    validators: ?std.StringArrayHashMap(Validator) = null,
 };

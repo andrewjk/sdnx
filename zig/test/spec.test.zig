@@ -4,14 +4,11 @@ const parseSchema = sdn.parseSchema_mod;
 const check = sdn.check;
 const parse = sdn.parse;
 
-// Read SPEC.md at compile time
-const spec_file = @embedFile("SPEC.md");
-
 test "spec examples" {
-    // TODO: Not sure why we can't read files in tests
-    //const file_path = "../../SPEC.md";
-    //const spec_file = try std.fs.cwd().readFileAlloc(std.testing.allocator, file_path, .unlimited);
-    //defer spec_file.deinit();
+    const cwd = std.Io.Dir.cwd();
+    const file_path = "../SPEC.md";
+    const spec_file = try cwd.readFileAlloc(std.testing.io, file_path, std.testing.allocator, .unlimited);
+    defer std.testing.allocator.free(spec_file);
 
     var lines = std.mem.splitScalar(u8, spec_file, '\n');
     var i: usize = 0;
@@ -57,27 +54,29 @@ test "spec examples" {
             const expected_str = std.mem.replaceOwned(u8, std.testing.allocator, expected_trimmed, "→", "\t") catch unreachable;
             defer std.testing.allocator.free(expected_str);
 
-            var schema_result = parseSchema.parseSchema(std.testing.allocator, schema_str) catch {
+            var schema_result = parseSchema.parseSchema(std.testing.allocator, schema_str);
+            defer schema_result.deinit();
+            if (!schema_result.ok) {
                 if (expected_str.len > 0) {} else {
                     ok = false;
                     std.debug.print("Spec test {d} failed parse schema: {s}\n", .{ num, input_str });
                 }
                 i += line.len + 1;
                 continue;
-            };
-            defer schema_result.deinit();
+            }
 
-            const input_data = parse(std.testing.allocator, input_str) catch {
+            var input_data = parse(std.testing.allocator, input_str);
+            defer input_data.deinit();
+            if (!input_data.ok) {
                 if (expected_str.len > 0) {} else {
                     ok = false;
                     std.debug.print("Spec test {d} failed parse: {s}\n", .{ num, input_str });
                 }
                 i += line.len + 1;
                 continue;
-            };
-            defer input_data.deinit(std.testing.allocator);
+            }
 
-            var check_result = check(std.testing.allocator, &input_data, &schema_result.schema) catch {
+            var check_result = check(std.testing.allocator, &input_data.data.?, &schema_result.schema.?) catch {
                 if (expected_str.len > 0) {} else {
                     ok = false;
                     std.debug.print("Spec test {d} failed check: {s}\n", .{ num, input_str });

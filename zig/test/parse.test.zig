@@ -1,7 +1,7 @@
 const std = @import("std");
 const sdn = @import("sdn");
 const parse = sdn.parse;
-const space_unspace = @import("space_unspace.zig");
+const spaceUnspace = @import("spaceUnspace.zig");
 
 fn expectBasicTest(result: anytype) !void {
     try std.testing.expect(result == .object);
@@ -71,9 +71,10 @@ test "parse: basic test" {
             \\  license_num: "112",
             \\}
         ;
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try expectBasicTest(result);
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try expectBasicTest(result.data.?);
     }
 
     // Test spaced input (with time fix)
@@ -96,13 +97,14 @@ test "parse: basic test" {
             \\  license_num: "112",
             \\}
         ;
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const fixed = try space_unspace.replaceAll(allocator, spaced, "10 : 00", "10:00");
+        const fixed = try spaceUnspace.replaceAll(allocator, spaced, "10 : 00", "10:00");
         defer allocator.free(fixed);
-        const result = try parse(allocator, fixed);
-        defer result.deinit(allocator);
-        try expectBasicTest(result);
+        var result = parse(allocator, fixed);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try expectBasicTest(result.data.?);
     }
 
     // Test unspaced input
@@ -125,11 +127,12 @@ test "parse: basic test" {
             \\  license_num: "112",
             \\}
         ;
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try expectBasicTest(result);
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try expectBasicTest(result.data.?);
     }
 }
 
@@ -138,30 +141,33 @@ test "parse: empty object" {
 
     // Test original input
     {
-        const result = try parse(allocator, "{}");
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 0);
+        var result = parse(allocator, "{}");
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 0);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, "{}");
+        const spaced = try spaceUnspace.space(allocator, "{}");
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 0);
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 0);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, "{}");
+        const unspaced = try spaceUnspace.unspace(allocator, "{}");
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 0);
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 0);
     }
 }
 
@@ -171,43 +177,46 @@ test "parse: negative numbers" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const temp = result.object.get("temp");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const temp = result.data.?.object.get("temp");
         try std.testing.expect(temp != null);
         try std.testing.expect(temp.?.int == -10);
-        const balance = result.object.get("balance");
+        const balance = result.data.?.object.get("balance");
         try std.testing.expect(balance != null);
         try std.testing.expect(balance.?.num == -3.14);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const temp = result.object.get("temp");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const temp = result.data.?.object.get("temp");
         try std.testing.expect(temp != null);
         try std.testing.expect(temp.?.int == -10);
-        const balance = result.object.get("balance");
+        const balance = result.data.?.object.get("balance");
         try std.testing.expect(balance != null);
         try std.testing.expect(balance.?.num == -3.14);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const temp = result.object.get("temp");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const temp = result.data.?.object.get("temp");
         try std.testing.expect(temp != null);
         try std.testing.expect(temp.?.int == -10);
-        const balance = result.object.get("balance");
+        const balance = result.data.?.object.get("balance");
         try std.testing.expect(balance != null);
         try std.testing.expect(balance.?.num == -3.14);
     }
@@ -219,43 +228,46 @@ test "parse: positive numbers with plus prefix" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const count = result.object.get("count");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const count = result.data.?.object.get("count");
         try std.testing.expect(count != null);
         try std.testing.expect(count.?.int == 42);
-        const score = result.object.get("score");
+        const score = result.data.?.object.get("score");
         try std.testing.expect(score != null);
         try std.testing.expect(score.?.num == 4.5);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const count = result.object.get("count");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const count = result.data.?.object.get("count");
         try std.testing.expect(count != null);
         try std.testing.expect(count.?.int == 42);
-        const score = result.object.get("score");
+        const score = result.data.?.object.get("score");
         try std.testing.expect(score != null);
         try std.testing.expect(score.?.num == 4.5);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const count = result.object.get("count");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const count = result.data.?.object.get("count");
         try std.testing.expect(count != null);
         try std.testing.expect(count.?.int == 42);
-        const score = result.object.get("score");
+        const score = result.data.?.object.get("score");
         try std.testing.expect(score != null);
         try std.testing.expect(score.?.num == 4.5);
     }
@@ -267,43 +279,46 @@ test "parse: hexadecimal integers" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const color = result.object.get("color");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const color = result.data.?.object.get("color");
         try std.testing.expect(color != null);
         try std.testing.expect(color.?.int == 0xFF00FF);
-        const alpha = result.object.get("alpha");
+        const alpha = result.data.?.object.get("alpha");
         try std.testing.expect(alpha != null);
         try std.testing.expect(alpha.?.int == 0xAB);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const color = result.object.get("color");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const color = result.data.?.object.get("color");
         try std.testing.expect(color != null);
         try std.testing.expect(color.?.int == 0xFF00FF);
-        const alpha = result.object.get("alpha");
+        const alpha = result.data.?.object.get("alpha");
         try std.testing.expect(alpha != null);
         try std.testing.expect(alpha.?.int == 0xAB);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const color = result.object.get("color");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const color = result.data.?.object.get("color");
         try std.testing.expect(color != null);
         try std.testing.expect(color.?.int == 0xFF00FF);
-        const alpha = result.object.get("alpha");
+        const alpha = result.data.?.object.get("alpha");
         try std.testing.expect(alpha != null);
         try std.testing.expect(alpha.?.int == 0xAB);
     }
@@ -315,43 +330,46 @@ test "parse: scientific notation" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const distance = result.object.get("distance");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const distance = result.data.?.object.get("distance");
         try std.testing.expect(distance != null);
         try std.testing.expect(distance.?.num == 1.5e10);
-        const tiny = result.object.get("tiny");
+        const tiny = result.data.?.object.get("tiny");
         try std.testing.expect(tiny != null);
         try std.testing.expect(tiny.?.num == 1.5e-5);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const distance = result.object.get("distance");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const distance = result.data.?.object.get("distance");
         try std.testing.expect(distance != null);
         try std.testing.expect(distance.?.num == 1.5e10);
-        const tiny = result.object.get("tiny");
+        const tiny = result.data.?.object.get("tiny");
         try std.testing.expect(tiny != null);
         try std.testing.expect(tiny.?.num == 1.5e-5);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const distance = result.object.get("distance");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const distance = result.data.?.object.get("distance");
         try std.testing.expect(distance != null);
         try std.testing.expect(distance.?.num == 1.5e10);
-        const tiny = result.object.get("tiny");
+        const tiny = result.data.?.object.get("tiny");
         try std.testing.expect(tiny != null);
         try std.testing.expect(tiny.?.num == 1.5e-5);
     }
@@ -363,43 +381,46 @@ test "parse: numbers with underscore separators" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const population = result.object.get("population");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const population = result.data.?.object.get("population");
         try std.testing.expect(population != null);
         try std.testing.expect(population.?.int == 1_000_000);
-        const big_number = result.object.get("big_number");
+        const big_number = result.data.?.object.get("big_number");
         try std.testing.expect(big_number != null);
         try std.testing.expect(big_number.?.num == 1_000_000.123);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const population = result.object.get("population");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const population = result.data.?.object.get("population");
         try std.testing.expect(population != null);
         try std.testing.expect(population.?.int == 1_000_000);
-        const big_number = result.object.get("big_number");
+        const big_number = result.data.?.object.get("big_number");
         try std.testing.expect(big_number != null);
         try std.testing.expect(big_number.?.num == 1_000_000.123);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const population = result.object.get("population");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const population = result.data.?.object.get("population");
         try std.testing.expect(population != null);
         try std.testing.expect(population.?.int == 1_000_000);
-        const big_number = result.object.get("big_number");
+        const big_number = result.data.?.object.get("big_number");
         try std.testing.expect(big_number != null);
         try std.testing.expect(big_number.?.num == 1_000_000.123);
     }
@@ -411,10 +432,11 @@ test "parse: string with escaped quotes" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const quote = result.object.get("quote");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const quote = result.data.?.object.get("quote");
         try std.testing.expect(quote != null);
         try std.testing.expect(quote.? == .string);
         try std.testing.expect(quote.?.string.len > 0);
@@ -422,24 +444,26 @@ test "parse: string with escaped quotes" {
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const quote = result.object.get("quote");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const quote = result.data.?.object.get("quote");
         try std.testing.expect(quote != null);
         try std.testing.expect(quote.? == .string);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const quote = result.object.get("quote");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const quote = result.data.?.object.get("quote");
         try std.testing.expect(quote != null);
         try std.testing.expect(quote.? == .string);
     }
@@ -451,30 +475,33 @@ test "parse: quoted field name" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 2);
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 2);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 2);
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 2);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 2);
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 2);
     }
 }
 
@@ -484,34 +511,37 @@ test "parse: field names with numbers and underscores" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 4);
-        try std.testing.expect(std.mem.eql(u8, result.object.get("field1").?.string, "a"));
-        try std.testing.expect(std.mem.eql(u8, result.object.get("field_2").?.string, "b"));
-        try std.testing.expect(std.mem.eql(u8, result.object.get("_private").?.string, "c"));
-        try std.testing.expect(std.mem.eql(u8, result.object.get("field_3_name").?.string, "d"));
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 4);
+        try std.testing.expect(std.mem.eql(u8, result.data.?.object.get("field1").?.string, "a"));
+        try std.testing.expect(std.mem.eql(u8, result.data.?.object.get("field_2").?.string, "b"));
+        try std.testing.expect(std.mem.eql(u8, result.data.?.object.get("_private").?.string, "c"));
+        try std.testing.expect(std.mem.eql(u8, result.data.?.object.get("field_3_name").?.string, "d"));
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 4);
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 4);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        try std.testing.expect(result.object.count() == 4);
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        try std.testing.expect(result.data.?.object.count() == 4);
     }
 }
 
@@ -521,47 +551,50 @@ test "parse: time only" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const meeting_time = result.object.get("meeting_time");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const meeting_time = result.data.?.object.get("meeting_time");
         try std.testing.expect(meeting_time != null);
         try std.testing.expect(meeting_time.? == .date);
-        const alarm_time = result.object.get("alarm_time");
+        const alarm_time = result.data.?.object.get("alarm_time");
         try std.testing.expect(alarm_time != null);
         try std.testing.expect(alarm_time.? == .date);
     }
 
     // Test spaced input (with time fixes)
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const fixed = try space_unspace.replaceAll(allocator, spaced, "14 : 30", "14:30");
+        const fixed = try spaceUnspace.replaceAll(allocator, spaced, "14 : 30", "14:30");
         defer allocator.free(fixed);
-        const fixed2 = try space_unspace.replaceAll(allocator, fixed, "07 : 15 : 30", "07:15:30");
+        const fixed2 = try spaceUnspace.replaceAll(allocator, fixed, "07 : 15 : 30", "07:15:30");
         defer allocator.free(fixed2);
-        const result = try parse(allocator, fixed2);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const meeting_time = result.object.get("meeting_time");
+        var result = parse(allocator, fixed2);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const meeting_time = result.data.?.object.get("meeting_time");
         try std.testing.expect(meeting_time != null);
         try std.testing.expect(meeting_time.? == .date);
-        const alarm_time = result.object.get("alarm_time");
+        const alarm_time = result.data.?.object.get("alarm_time");
         try std.testing.expect(alarm_time != null);
         try std.testing.expect(alarm_time.? == .date);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const meeting_time = result.object.get("meeting_time");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const meeting_time = result.data.?.object.get("meeting_time");
         try std.testing.expect(meeting_time != null);
         try std.testing.expect(meeting_time.? == .date);
-        const alarm_time = result.object.get("alarm_time");
+        const alarm_time = result.data.?.object.get("alarm_time");
         try std.testing.expect(alarm_time != null);
         try std.testing.expect(alarm_time.? == .date);
     }
@@ -573,36 +606,39 @@ test "parse: datetime with timezone offset" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const event_time = result.object.get("event_time");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const event_time = result.data.?.object.get("event_time");
         try std.testing.expect(event_time != null);
         try std.testing.expect(event_time.? == .date);
     }
 
     // Test spaced input (with time fix)
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const fixed = try space_unspace.replaceAll(allocator, spaced, "14 : 30+02 : 00", "14:30+02:00");
+        const fixed = try spaceUnspace.replaceAll(allocator, spaced, "14 : 30+02 : 00", "14:30+02:00");
         defer allocator.free(fixed);
-        const result = try parse(allocator, fixed);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const event_time = result.object.get("event_time");
+        var result = parse(allocator, fixed);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const event_time = result.data.?.object.get("event_time");
         try std.testing.expect(event_time != null);
         try std.testing.expect(event_time.? == .date);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const event_time = result.object.get("event_time");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const event_time = result.data.?.object.get("event_time");
         try std.testing.expect(event_time != null);
         try std.testing.expect(event_time.? == .date);
     }
@@ -621,34 +657,37 @@ test "parse: multiple consecutive comments" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
     }
@@ -660,43 +699,46 @@ test "parse: inline comments" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Bob"));
-        const age = result.object.get("age");
+        const age = result.data.?.object.get("age");
         try std.testing.expect(age != null);
         try std.testing.expect(age.?.int == 30);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Bob"));
-        const age = result.object.get("age");
+        const age = result.data.?.object.get("age");
         try std.testing.expect(age != null);
         try std.testing.expect(age.?.int == 30);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Bob"));
-        const age = result.object.get("age");
+        const age = result.data.?.object.get("age");
         try std.testing.expect(age != null);
         try std.testing.expect(age.?.int == 30);
     }
@@ -708,43 +750,46 @@ test "parse: comments between fields" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
-        const age = result.object.get("age");
+        const age = result.data.?.object.get("age");
         try std.testing.expect(age != null);
         try std.testing.expect(age.?.int == 25);
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
-        const age = result.object.get("age");
+        const age = result.data.?.object.get("age");
         try std.testing.expect(age != null);
         try std.testing.expect(age.?.int == 25);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
-        const age = result.object.get("age");
+        const age = result.data.?.object.get("age");
         try std.testing.expect(age != null);
         try std.testing.expect(age.?.int == 25);
     }
@@ -767,13 +812,14 @@ test "parse: deeply nested structures" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const level1 = result.object.get("level1");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const level1 = result.data.?.object.get("level1");
         try std.testing.expect(level1 != null);
         try std.testing.expect(level1.? == .object);
-        const nested_array = result.object.get("nested_array");
+        const nested_array = result.data.?.object.get("nested_array");
         try std.testing.expect(nested_array != null);
         try std.testing.expect(nested_array.? == .array);
         try std.testing.expect(nested_array.?.array.items.len == 2);
@@ -781,15 +827,16 @@ test "parse: deeply nested structures" {
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const level1 = result.object.get("level1");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const level1 = result.data.?.object.get("level1");
         try std.testing.expect(level1 != null);
         try std.testing.expect(level1.? == .object);
-        const nested_array = result.object.get("nested_array");
+        const nested_array = result.data.?.object.get("nested_array");
         try std.testing.expect(nested_array != null);
         try std.testing.expect(nested_array.? == .array);
         try std.testing.expect(nested_array.?.array.items.len == 2);
@@ -797,15 +844,16 @@ test "parse: deeply nested structures" {
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const level1 = result.object.get("level1");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const level1 = result.data.?.object.get("level1");
         try std.testing.expect(level1 != null);
         try std.testing.expect(level1.? == .object);
-        const nested_array = result.object.get("nested_array");
+        const nested_array = result.data.?.object.get("nested_array");
         try std.testing.expect(nested_array != null);
         try std.testing.expect(nested_array.? == .array);
         try std.testing.expect(nested_array.?.array.items.len == 2);
@@ -818,34 +866,37 @@ test "parse: single field object" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
     }
 
     // Test spaced input
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const result = try parse(allocator, spaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try std.testing.expect(result == .object);
-        const name = result.object.get("name");
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const name = result.data.?.object.get("name");
         try std.testing.expect(name != null);
         try std.testing.expect(std.mem.eql(u8, name.?.string, "Alice"));
     }
@@ -896,28 +947,31 @@ test "parse: large dataset" {
 
     // Test original input
     {
-        const result = try parse(allocator, input);
-        defer result.deinit(allocator);
-        try expectLargeDataset(result);
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try expectLargeDataset(result.data.?);
     }
 
     // Test spaced input (with time fix)
     {
-        const spaced = try space_unspace.space(allocator, input);
+        const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
-        const fixed = try space_unspace.replaceAll(allocator, spaced, "10 : 30 : 00", "10:30:00");
+        const fixed = try spaceUnspace.replaceAll(allocator, spaced, "10 : 30 : 00", "10:30:00");
         defer allocator.free(fixed);
-        const result = try parse(allocator, fixed);
-        defer result.deinit(allocator);
-        try expectLargeDataset(result);
+        var result = parse(allocator, fixed);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try expectLargeDataset(result.data.?);
     }
 
     // Test unspaced input
     {
-        const unspaced = try space_unspace.unspace(allocator, input);
+        const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
-        const result = try parse(allocator, unspaced);
-        defer result.deinit(allocator);
-        try expectLargeDataset(result);
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try expectLargeDataset(result.data.?);
     }
 }

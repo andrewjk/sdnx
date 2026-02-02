@@ -3,26 +3,49 @@ const Allocator = std.mem.Allocator;
 
 const Value = @import("./types/Value.zig").Value;
 
-/// Status tracks the current parsing position
+/// Error information with position details
+pub const ParseErrorInfo = struct {
+    message: []const u8,
+    index: usize,
+    length: usize,
+
+    pub fn deinit(self: *ParseErrorInfo, allocator: Allocator) void {
+        allocator.free(self.message);
+    }
+};
+
+/// Result type for parse operations - contains either data or errors
+pub const ParseResult = struct {
+    ok: bool,
+    data: ?Value,
+    errors: std.ArrayListUnmanaged(ParseErrorInfo),
+    allocator: Allocator,
+
+    pub fn deinit(self: *ParseResult) void {
+        for (self.errors.items) |*err| {
+            err.deinit(self.allocator);
+        }
+        self.errors.deinit(self.allocator);
+        if (self.data) |*d| {
+            d.deinit(self.allocator);
+        }
+    }
+};
+
+/// Status tracks the current parsing position and collects errors
 pub const Status = struct {
     input: []const u8,
     i: usize,
-};
+    errors: std.ArrayListUnmanaged(ParseErrorInfo),
+    allocator: Allocator,
 
-const ParseError = error{
-    UnexpectedEnd,
-    ObjectNotClosed,
-    ArrayNotClosed,
-    ValueNotSet,
-    UnterminatedString,
-    InvalidCharacter,
-    ExpectedBrace,
-    ExpectedChar,
-    InvalidFieldName,
-    InvalidEscapeSequence,
-    Overflow,
-    UnsupportedValueType,
-} || std.mem.Allocator.Error;
+    pub fn deinit(self: *Status) void {
+        for (self.errors.items) |*err| {
+            err.deinit(self.allocator);
+        }
+        self.errors.deinit(self.allocator);
+    }
+};
 
 /// Trim whitespace from current position
 pub fn trim(status: *Status) void {
@@ -40,21 +63,43 @@ pub fn accept(ch: u8, status: *Status) bool {
     return false;
 }
 
-/// Expect a specific character, throw error if not found
-pub fn expect(ch: u8, status: *Status) !void {
+/// Expect a specific character, record error if not found
+pub fn expect(ch: u8, status: *Status) void {
     if (status.i < status.input.len and status.input[status.i] == ch) {
         status.i += 1;
         return;
     }
-    return error.ExpectedChar;
+    const msg = std.fmt.allocPrint(status.allocator, "Expected '{c}' but found '{c}'", .{ ch, if (status.i < status.input.len) status.input[status.i] else '?' }) catch return;
+    status.errors.append(status.allocator, .{
+        .message = msg,
+        .index = status.i,
+        .length = 1,
+    }) catch {
+        status.allocator.free(msg);
+    };
+}
+
+/// Add an error to the status
+fn addError(status: *Status, message: []const u8, index: usize, length: usize) void {
+    const msg = std.fmt.allocPrint(status.allocator, "{s}", .{message}) catch return;
+    status.errors.append(status.allocator, .{
+        .message = msg,
+        .index = index,
+        .length = length,
+    }) catch {
+        status.allocator.free(msg);
+    };
 }
 
 /// Parse structured data from input string into a value
-pub fn parse(allocator: Allocator, input: []const u8) ParseError!Value {
+pub fn parse(allocator: Allocator, input: []const u8) ParseResult {
     var status = Status{
         .input = input,
         .i = 0,
+        .errors = .empty,
+        .allocator = allocator,
     };
+    defer status.deinit();
 
     trim(&status);
 
@@ -64,14 +109,57 @@ pub fn parse(allocator: Allocator, input: []const u8) ParseError!Value {
     }
 
     if (accept('{', &status)) {
-        return parseObject(allocator, &status);
+        const result = parseObject(allocator, &status);
+
+        // Move errors from status to result
+        var errors_copy: std.ArrayListUnmanaged(ParseErrorInfo) = .empty;
+        for (status.errors.items) |err| {
+            const msg = allocator.dupe(u8, err.message) catch continue;
+            errors_copy.append(allocator, .{
+                .message = msg,
+                .index = err.index,
+                .length = err.length,
+            }) catch {
+                allocator.free(msg);
+                continue;
+            };
+        }
+
+        if (result) |value| {
+            return ParseResult{
+                .ok = errors_copy.items.len == 0,
+                .data = value,
+                .errors = errors_copy,
+                .allocator = allocator,
+            };
+        } else |_| {
+            return ParseResult{
+                .ok = false,
+                .data = null,
+                .errors = errors_copy,
+                .allocator = allocator,
+            };
+        }
     } else {
-        return error.ExpectedBrace;
+        const msg = std.fmt.allocPrint(allocator, "Expected '{{' but found '{c}'", .{if (status.i < status.input.len) status.input[status.i] else '?'}) catch "Expected '{'";
+        var errors: std.ArrayListUnmanaged(ParseErrorInfo) = .empty;
+        errors.append(allocator, .{
+            .message = msg,
+            .index = 0,
+            .length = 1,
+        }) catch allocator.free(msg);
+
+        return ParseResult{
+            .ok = false,
+            .data = null,
+            .errors = errors,
+            .allocator = allocator,
+        };
     }
 }
 
-fn parseObject(allocator: Allocator, status: *Status) ParseError!Value {
-    var result = std.StringHashMap(Value).init(allocator);
+fn parseObject(allocator: Allocator, status: *Status) anyerror!Value {
+    var result = std.StringArrayHashMap(Value).init(allocator);
     errdefer {
         var iter = result.iterator();
         while (iter.next()) |entry| {
@@ -81,15 +169,18 @@ fn parseObject(allocator: Allocator, status: *Status) ParseError!Value {
         result.deinit();
     }
 
+    const start = status.i;
+    _ = start;
     while (true) {
         trim(status);
         if (accept('}', status)) {
             break;
         } else if (status.i >= status.input.len or accept(']', status)) {
-            return error.ObjectNotClosed;
+            addError(status, "Object not closed", status.i, 1);
+            return error.ParseError;
         }
 
-        try parseField(allocator, status, &result);
+        parseField(allocator, status, &result);
 
         trim(status);
         _ = accept(',', status);
@@ -98,7 +189,7 @@ fn parseObject(allocator: Allocator, status: *Status) ParseError!Value {
     return .{ .object = result };
 }
 
-fn parseArray(allocator: Allocator, status: *Status) ParseError!Value {
+fn parseArray(allocator: Allocator, status: *Status) anyerror!Value {
     var result: std.ArrayList(Value) = .empty;
     errdefer {
         for (result.items) |*item| {
@@ -107,12 +198,15 @@ fn parseArray(allocator: Allocator, status: *Status) ParseError!Value {
         result.deinit(allocator);
     }
 
+    const start = status.i;
+    _ = start;
     while (true) {
         trim(status);
         if (accept(']', status)) {
             break;
         } else if (status.i >= status.input.len or accept('}', status)) {
-            return error.ArrayNotClosed;
+            addError(status, "Array not closed", status.i, 1);
+            return error.ParseError;
         } else if (result.items.len > 0) {
             // After an item, we expect either ']' or ','
             if (status.i < status.input.len and status.input[status.i] == ',') {
@@ -123,18 +217,19 @@ fn parseArray(allocator: Allocator, status: *Status) ParseError!Value {
                 continue;
             } else {
                 // Invalid character after array item (not comma or closing bracket)
-                return error.InvalidCharacter;
+                addError(status, "Expected ',' or ']'", status.i, 1);
+                return error.ParseError;
             }
         }
 
-        const value = try parseValue(allocator, status);
+        const value = parseValue(allocator, status) catch |err| return err;
         try result.append(allocator, value);
     }
 
     return .{ .array = result };
 }
 
-fn parseField(allocator: Allocator, status: *Status, result: *std.StringHashMap(Value)) !void {
+fn parseField(allocator: Allocator, status: *Status, result: *std.StringArrayHashMap(Value)) void {
     trim(status);
 
     if (accept('#', status)) {
@@ -149,7 +244,11 @@ fn parseField(allocator: Allocator, status: *Status, result: *std.StringHashMap(
                 if (status.input[status.i] == '\\') {
                     status.i += 1;
                     if (status.i >= status.input.len) {
-                        return error.InvalidEscapeSequence;
+                        addError(status, "Invalid escape sequence", status.i - 1, 2);
+                        break;
+                    }
+                    if (status.input[status.i] != '\\' and status.input[status.i] != '"' and status.input[status.i] != 'n' and status.input[status.i] != 't' and status.input[status.i] != 'r') {
+                        addError(status, "Invalid escape sequence", status.i - 1, 2);
                     }
                 } else if (status.input[status.i] == '"') {
                     status.i += 1;
@@ -158,7 +257,8 @@ fn parseField(allocator: Allocator, status: *Status, result: *std.StringHashMap(
                 status.i += 1;
             }
             if (status.i >= status.input.len) {
-                return error.UnterminatedString;
+                addError(status, "Unterminated string", start, status.i - start);
+                return;
             }
             break :blk status.input[start..status.i];
         } else if (status.i < status.input.len and isAlphaOrUnderscore(status.input[status.i])) {
@@ -168,7 +268,9 @@ fn parseField(allocator: Allocator, status: *Status, result: *std.StringHashMap(
             }
             break :blk status.input[start..status.i];
         } else {
-            return error.InvalidFieldName;
+            addError(status, "Field must start with quote or alpha", start, 1);
+            status.i += 1;
+            return;
         }
     };
 
@@ -178,21 +280,29 @@ fn parseField(allocator: Allocator, status: *Status, result: *std.StringHashMap(
     if (status.i < status.input.len and
         (status.input[status.i] == '-' or isAlphaNumericOrUnderscore(status.input[status.i])))
     {
-        return error.InvalidFieldName;
+        addError(status, "Invalid field name", start, status.i - start + 1);
+        return;
     }
 
     // Check for double colon (e.g., "name::" instead of "name:")
     if (status.i + 1 < status.input.len and
         status.input[status.i] == ':' and status.input[status.i + 1] == ':')
     {
-        return error.InvalidFieldName;
+        addError(status, "Invalid field name", start, status.i - start + 1);
+        return;
     }
 
     trim(status);
-    try expect(':', status);
+    expect(':', status);
 
-    const value = try parseValue(allocator, status);
-    const name_dup = try allocator.dupe(u8, name);
+    const value = parseValue(allocator, status) catch {
+        addError(status, "Unsupported value type", status.i, 0);
+        return;
+    };
+    const name_dup = allocator.dupe(u8, name) catch {
+        value.deinit(allocator);
+        return;
+    };
     errdefer allocator.free(name_dup);
 
     // After parsing a value, check if it's a string followed immediately by an alphabetic character
@@ -201,14 +311,19 @@ fn parseField(allocator: Allocator, status: *Status, result: *std.StringHashMap(
         status.i < status.input.len and std.ascii.isAlphabetic(status.input[status.i]))
     {
         // Clean up the parsed value before returning error
-        value.deinit(allocator);
-        return error.ExpectedChar;
+        var val_copy = value;
+        val_copy.deinit(allocator);
+        addError(status, "Expected ':'", status.i, 1);
+        return;
     }
 
-    try result.put(name_dup, value);
+    result.put(name_dup, value) catch {
+        allocator.free(name_dup);
+        value.deinit(allocator);
+    };
 }
 
-fn parseValue(allocator: Allocator, status: *Status) ParseError!Value {
+fn parseValue(allocator: Allocator, status: *Status) anyerror!Value {
     trim(status);
     if (accept('{', status)) {
         return parseObject(allocator, status);
@@ -232,14 +347,14 @@ fn parseValue(allocator: Allocator, status: *Status) ParseError!Value {
     }
 }
 
-fn parseString(status: *Status) ParseError![]const u8 {
+fn parseString(status: *Status) anyerror![]const u8 {
     const start = status.i;
 
     while (status.i < status.input.len) {
         if (status.input[status.i] == '\\') {
             status.i += 1;
             if (status.input[status.i] != '"') {
-                return error.InvalidEscapeSequence;
+                addError(status, "Invalid escape sequence", status.i - 1, 2);
             }
         } else if (status.input[status.i] == '"') {
             status.i += 1;
@@ -250,7 +365,8 @@ fn parseString(status: *Status) ParseError![]const u8 {
     }
 
     if (status.i >= status.input.len) {
-        return error.UnterminatedString;
+        addError(status, "String not closed", start, status.i - start);
+        return error.ParseError;
     }
 
     var value = status.input[start .. status.i - 1];
@@ -301,7 +417,7 @@ fn isDateString(input: []const u8) bool {
 }
 
 /// Convert a string value to appropriate type
-fn convertValue(value_str: []const u8) ParseError!Value {
+fn convertValue(value_str: []const u8) anyerror!Value {
     if (std.mem.eql(u8, value_str, "null")) {
         return .{ .null = {} };
     } else if (std.mem.eql(u8, value_str, "true")) {

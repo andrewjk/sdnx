@@ -11,6 +11,35 @@ const MixSchema = @import("./types/MixSchema.zig").MixSchema;
 const AnySchema = @import("./types/AnySchema.zig").AnySchema;
 const Validator = @import("./types/Validator.zig").Validator;
 
+/// Error information with position details
+pub const SchemaParseErrorInfo = struct {
+    message: []const u8,
+    index: usize,
+    length: usize,
+
+    pub fn deinit(self: *SchemaParseErrorInfo, allocator: Allocator) void {
+        allocator.free(self.message);
+    }
+};
+
+/// Result type for schema parse operations
+pub const SchemaParseResult = struct {
+    ok: bool,
+    schema: ?Schema,
+    errors: std.ArrayListUnmanaged(SchemaParseErrorInfo),
+    allocator: Allocator,
+
+    pub fn deinit(self: *SchemaParseResult) void {
+        for (self.errors.items) |*err| {
+            err.deinit(self.allocator);
+        }
+        self.errors.deinit(self.allocator);
+        if (self.schema) |*s| {
+            deinitSchema(s, self.allocator);
+        }
+    }
+};
+
 /// Status tracks the current parsing position for schema parsing
 pub const Status = struct {
     input: []const u8,
@@ -18,24 +47,16 @@ pub const Status = struct {
     description: []const u8 = "",
     mix_counter: usize,
     any_counter: usize,
-};
+    errors: std.ArrayListUnmanaged(SchemaParseErrorInfo),
+    allocator: Allocator,
 
-const ParseError = error{
-    UnexpectedEnd,
-    ObjectNotClosed,
-    ArrayNotClosed,
-    ArrayEmpty,
-    UnterminatedString,
-    InvalidCharacter,
-    ExpectedChar,
-    ExpectedBrace,
-    ExpectedParen,
-    InvalidFieldName,
-    InvalidEscapeSequence,
-    UnknownMacro,
-    UnsupportedValidator,
-    UnsupportedValueType,
-} || std.mem.Allocator.Error;
+    pub fn deinit(self: *Status) void {
+        for (self.errors.items) |*err| {
+            err.deinit(self.allocator);
+        }
+        self.errors.deinit(self.allocator);
+    }
+};
 
 /// Properly deinitialize a Schema, freeing all keys and values
 pub fn deinitSchema(schema: *Schema, allocator: Allocator) void {
@@ -47,15 +68,17 @@ pub fn deinitSchema(schema: *Schema, allocator: Allocator) void {
     schema.deinit();
 }
 
-/// SchemaResult wraps a Schema and provides proper memory management
-pub const SchemaResult = struct {
-    schema: Schema,
-    allocator: Allocator,
-
-    pub fn deinit(self: *SchemaResult) void {
-        deinitSchema(&self.schema, self.allocator);
-    }
-};
+/// Add an error to the status
+fn addError(status: *Status, message: []const u8, index: usize, length: usize) void {
+    const msg = std.fmt.allocPrint(status.allocator, "{s}", .{message}) catch return;
+    status.errors.append(status.allocator, .{
+        .message = msg,
+        .index = index,
+        .length = length,
+    }) catch {
+        status.allocator.free(msg);
+    };
+}
 
 /// Trim whitespace from current position
 fn trim(status: *Status) void {
@@ -73,39 +96,88 @@ fn accept(ch: u8, status: *Status) bool {
     return false;
 }
 
-/// Expect a specific character, throw error if not found
-fn expect(ch: u8, status: *Status) !void {
+/// Expect a specific character, record error if not found
+fn expect(ch: u8, status: *Status) void {
     if (status.i < status.input.len and status.input[status.i] == ch) {
         status.i += 1;
         return;
     }
-    return error.ExpectedChar;
+    const msg = std.fmt.allocPrint(status.allocator, "Expected '{c}' but found '{c}'", .{ ch, if (status.i < status.input.len) status.input[status.i] else '?' }) catch return;
+    status.errors.append(status.allocator, .{
+        .message = msg,
+        .index = status.i,
+        .length = 1,
+    }) catch {
+        status.allocator.free(msg);
+    };
 }
 
 /// Parse schema from input string
-pub fn parseSchema(allocator: Allocator, input: []const u8) ParseError!SchemaResult {
+pub fn parseSchema(allocator: Allocator, input: []const u8) SchemaParseResult {
     var status = Status{
         .input = input,
         .i = 0,
         .description = "",
         .mix_counter = 1,
         .any_counter = 1,
+        .errors = .empty,
+        .allocator = allocator,
     };
+    defer status.deinit();
 
     trim(&status);
 
     if (accept('{', &status)) {
-        const schema = try parseObject(allocator, &status);
-        return SchemaResult{
-            .schema = schema,
+        const result = parseObject(allocator, &status);
+
+        // Move errors from status to result
+        var errors_copy: std.ArrayListUnmanaged(SchemaParseErrorInfo) = .empty;
+        for (status.errors.items) |err| {
+            const msg = allocator.dupe(u8, err.message) catch continue;
+            errors_copy.append(allocator, .{
+                .message = msg,
+                .index = err.index,
+                .length = err.length,
+            }) catch {
+                allocator.free(msg);
+                continue;
+            };
+        }
+
+        if (result) |schema| {
+            return SchemaParseResult{
+                .ok = errors_copy.items.len == 0,
+                .schema = schema,
+                .errors = errors_copy,
+                .allocator = allocator,
+            };
+        } else |_| {
+            return SchemaParseResult{
+                .ok = false,
+                .schema = null,
+                .errors = errors_copy,
+                .allocator = allocator,
+            };
+        }
+    } else {
+        const msg = std.fmt.allocPrint(allocator, "Expected '{{' but found '{c}'", .{if (status.i < status.input.len) status.input[status.i] else '?'}) catch "Expected '{'";
+        var errors: std.ArrayListUnmanaged(SchemaParseErrorInfo) = .empty;
+        errors.append(allocator, .{
+            .message = msg,
+            .index = 0,
+            .length = 1,
+        }) catch allocator.free(msg);
+
+        return SchemaParseResult{
+            .ok = false,
+            .schema = null,
+            .errors = errors,
             .allocator = allocator,
         };
-    } else {
-        return error.ExpectedBrace;
     }
 }
 
-fn parseObject(allocator: Allocator, status: *Status) ParseError!Schema {
+fn parseObject(allocator: Allocator, status: *Status) anyerror!Schema {
     var result = Schema.init(allocator);
     errdefer {
         var iter = result.iterator();
@@ -123,10 +195,11 @@ fn parseObject(allocator: Allocator, status: *Status) ParseError!Schema {
         if (accept('}', status)) {
             break;
         } else if (status.i >= status.input.len or accept(']', status)) {
-            return error.ObjectNotClosed;
+            addError(status, "Object not closed", status.i, 1);
+            return error.ParseError;
         }
 
-        try parseField(allocator, status, &result);
+        parseField(allocator, status, &result);
 
         trim(status);
         _ = accept(',', status);
@@ -134,23 +207,26 @@ fn parseObject(allocator: Allocator, status: *Status) ParseError!Schema {
     return result;
 }
 
-fn parseArray(allocator: Allocator, status: *Status) ParseError!*SchemaValue {
+fn parseArray(allocator: Allocator, status: *Status) anyerror!*SchemaValue {
     trim(status);
     const start = status.i;
     _ = start;
 
     if (accept(']', status)) {
-        return error.ArrayEmpty;
+        addError(status, "Array cannot be empty", status.i, 1);
+        return error.ParseError;
     } else if (accept('}', status)) {
-        return error.ArrayNotClosed;
+        addError(status, "Array not closed", status.i, 1);
+        return error.ParseError;
     }
 
-    var value = try parseValue(allocator, status);
+    var value = parseValue(allocator, status) catch |err| return err;
 
     trim(status);
     if (status.i >= status.input.len or !accept(']', status)) {
         value.deinit(allocator);
-        return error.ArrayNotClosed;
+        addError(status, "Array not closed", status.i, 1);
+        return error.ParseError;
     }
 
     const result_ptr = try allocator.create(SchemaValue);
@@ -158,7 +234,7 @@ fn parseArray(allocator: Allocator, status: *Status) ParseError!*SchemaValue {
     return result_ptr;
 }
 
-fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError!void {
+fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
     trim(status);
 
     const start = status.i;
@@ -184,11 +260,11 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError
         }
         const macro = status.input[macro_start..status.i];
         trim(status);
-        try expect('(', status);
+        expect('(', status);
 
         if (std.mem.eql(u8, macro, "mix")) {
             trim(status);
-            try expect('{', status);
+            expect('{', status);
             var inner_list: std.ArrayList(Schema) = .empty;
             errdefer {
                 for (inner_list.items) |*item| {
@@ -202,26 +278,38 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError
                 inner_list.deinit(allocator);
             }
 
+            const type_dup = allocator.dupe(u8, "mix") catch return;
             var mix_result = MixSchema{
-                .type = try allocator.dupe(u8, "mix"),
+                .type = type_dup,
                 .inner = inner_list,
             };
 
-            try mix_result.inner.append(allocator, try parseObject(allocator, status));
+            const inner_schema = parseObject(allocator, status) catch {
+                allocator.free(mix_result.type);
+                return;
+            };
+            mix_result.inner.append(allocator, inner_schema) catch {
+                allocator.free(mix_result.type);
+                return;
+            };
 
             trim(status);
             while (accept('|', status)) {
                 trim(status);
-                try expect('{', status);
-                try mix_result.inner.append(allocator, try parseObject(allocator, status));
+                expect('{', status);
+                const alt_schema = parseObject(allocator, status) catch continue;
+                mix_result.inner.append(allocator, alt_schema) catch continue;
                 trim(status);
             }
 
-            try expect(')', status);
+            expect(')', status);
 
-            const key = try std.fmt.allocPrint(allocator, "mix${d}", .{status.mix_counter});
+            const key = std.fmt.allocPrint(allocator, "mix${d}", .{status.mix_counter}) catch return;
             status.mix_counter += 1;
-            try result.put(key, .{ .mix = mix_result });
+            result.put(key, .{ .mix = mix_result }) catch {
+                allocator.free(key);
+                mix_result.deinit(allocator);
+            };
         } else if (std.mem.eql(u8, macro, "any")) {
             trim(status);
 
@@ -241,27 +329,32 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError
             }
             const pattern = status.input[pattern_start..status.i];
             trim(status);
-            try expect(')', status);
+            expect(')', status);
             trim(status);
-            try expect(':', status);
+            expect(':', status);
 
-            const inner_value = try parseValue(allocator, status);
-            const inner = try allocator.create(SchemaValue);
+            const inner_value = parseValue(allocator, status) catch return;
+            const inner = allocator.create(SchemaValue) catch return;
             inner.* = inner_value;
 
-            const key = try std.fmt.allocPrint(allocator, "any${d}", .{status.any_counter});
+            const key = std.fmt.allocPrint(allocator, "any${d}", .{status.any_counter}) catch return;
             status.any_counter += 1;
 
-            try result.put(key, .{
+            const pattern_dup = allocator.dupe(u8, pattern) catch return;
+
+            result.put(key, .{
                 .any = AnySchema{
-                    .type = try allocator.dupe(u8, pattern),
+                    .type = pattern_dup,
                     .inner = inner,
                 },
-            });
-
-            errdefer allocator.free(pattern);
+            }) catch {
+                allocator.free(key);
+                allocator.free(pattern_dup);
+                inner.deinit(allocator);
+                allocator.destroy(inner);
+            };
         } else {
-            return error.UnknownMacro;
+            addError(status, "Unknown macro", macro_start, macro.len);
         }
 
         return;
@@ -270,18 +363,24 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError
     // Parse field name
     const name = blk: {
         if (accept('"', status)) {
-            const parsed = try parseString(allocator, status, false);
-            break :blk parsed;
+            const parsed = parseString(allocator, status, false);
+            if (parsed) |p| {
+                break :blk p;
+            } else |_| {
+                return;
+            }
         } else {
             if (status.i >= status.input.len or !isAlphaOrUnderscore(status.input[status.i])) {
-                return error.InvalidFieldName;
+                addError(status, "Field must start with quote or alpha", start, 1);
+                status.i += 1;
+                return;
             }
             status.i += 1;
             while (status.i < status.input.len and isAlphaNumericOrUnderscore(status.input[status.i])) {
                 status.i += 1;
             }
             const name_str = status.input[start..status.i];
-            break :blk try allocator.dupe(u8, name_str);
+            break :blk allocator.dupe(u8, name_str) catch return;
         }
     };
     errdefer allocator.free(name);
@@ -292,13 +391,19 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError
     if (status.i < status.input.len and
         (status.input[status.i] == '-' or isAlphaNumericOrUnderscore(status.input[status.i])))
     {
-        return error.InvalidFieldName;
+        addError(status, "Invalid field name", start, status.i - start + 1);
+        allocator.free(name);
+        return;
     }
 
     trim(status);
-    try expect(':', status);
+    expect(':', status);
 
-    const value = try parseValue(allocator, status);
+    const value = parseValue(allocator, status) catch {
+        addError(status, "Unsupported value type", status.i, 0);
+        allocator.free(name);
+        return;
+    };
 
     // After parsing a value, check if it's a string type followed immediately by an alphabetic character
     // This indicates an unescaped quote issue like: "Hello "World""
@@ -308,13 +413,19 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) ParseError
         // Clean up the parsed value before returning error
         var val_copy = value;
         val_copy.deinit(allocator);
-        return error.ExpectedChar;
+        allocator.free(name);
+        addError(status, "Expected ':'", status.i, 1);
+        return;
     }
 
-    try result.put(name, value);
+    result.put(name, value) catch {
+        allocator.free(name);
+        var val_copy = value;
+        val_copy.deinit(allocator);
+    };
 }
 
-fn parseValue(allocator: Allocator, status: *Status) ParseError!SchemaValue {
+fn parseValue(allocator: Allocator, status: *Status) anyerror!SchemaValue {
     var value = try parseSingleValue(allocator, status);
 
     trim(status);
@@ -331,7 +442,8 @@ fn parseValue(allocator: Allocator, status: *Status) ParseError!SchemaValue {
 
         while (true) {
             trim(status);
-            try union_values.append(allocator, try parseSingleValue(allocator, status));
+            const next_value = parseSingleValue(allocator, status) catch break;
+            try union_values.append(allocator, next_value);
             trim(status);
 
             if (!accept('|', status)) {
@@ -348,7 +460,7 @@ fn parseValue(allocator: Allocator, status: *Status) ParseError!SchemaValue {
     return value;
 }
 
-fn parseSingleValue(allocator: Allocator, status: *Status) ParseError!SchemaValue {
+fn parseSingleValue(allocator: Allocator, status: *Status) anyerror!SchemaValue {
     trim(status);
     if (accept('{', status)) {
         const inner = try parseObject(allocator, status);
@@ -376,7 +488,7 @@ fn parseSingleValue(allocator: Allocator, status: *Status) ParseError!SchemaValu
     }
 }
 
-fn parseType(allocator: Allocator, status: *Status) ParseError!SchemaValue {
+fn parseType(allocator: Allocator, status: *Status) anyerror!SchemaValue {
     const start = status.i;
     while (status.i < status.input.len and !isDelim(status.input[status.i]) and !std.ascii.isWhitespace(status.input[status.i])) {
         status.i += 1;
@@ -420,7 +532,8 @@ fn parseType(allocator: Allocator, status: *Status) ParseError!SchemaValue {
         const validator = std.mem.trim(u8, status.input[validator_start..status.i], &std.ascii.whitespace);
 
         if (isTypeWithValidators(type_str) and !isValidatorSupported(type_str, validator)) {
-            return error.UnsupportedValidator;
+            addError(status, "Unsupported validator", validator_start, validator.len);
+            continue;
         }
 
         var raw: []const u8 = "true";
@@ -447,12 +560,12 @@ fn parseType(allocator: Allocator, status: *Status) ParseError!SchemaValue {
                 required = (try convertValue(raw, -1)) != 0;
             }
             trim(status);
-            try expect(')', status);
+            expect(')', status);
             trim(status);
         }
 
         if (result.validators == null) {
-            result.validators = std.StringHashMap(Validator).init(allocator);
+            result.validators = std.StringArrayHashMap(Validator).init(allocator);
         }
 
         if (raw_allocated) {
@@ -477,18 +590,20 @@ fn parseType(allocator: Allocator, status: *Status) ParseError!SchemaValue {
     return .{ .field = result };
 }
 
-fn parseString(allocator: Allocator, status: *Status, with_quotes: bool) ParseError![]const u8 {
+fn parseString(allocator: Allocator, status: *Status, with_quotes: bool) anyerror![]const u8 {
     const start = if (with_quotes) status.i - 1 else status.i;
 
     while (status.i < status.input.len) {
         if (status.input[status.i] == '\\') {
             status.i += 1;
             if (status.i >= status.input.len) {
-                return error.InvalidEscapeSequence;
+                addError(status, "Invalid escape sequence", status.i - 1, 2);
+                return error.ParseError;
             }
             // Only " is a valid escape sequence
             if (status.input[status.i] != '"') {
-                return error.InvalidEscapeSequence;
+                addError(status, "Invalid escape sequence", status.i - 1, 2);
+                return error.ParseError;
             }
             status.i += 1;
             continue;
@@ -500,7 +615,8 @@ fn parseString(allocator: Allocator, status: *Status, with_quotes: bool) ParseEr
     }
 
     if (status.i >= status.input.len) {
-        return error.UnterminatedString;
+        addError(status, "String not closed", start, status.i - start);
+        return error.ParseError;
     }
 
     status.i += 1;
@@ -508,7 +624,7 @@ fn parseString(allocator: Allocator, status: *Status, with_quotes: bool) ParseEr
     return try allocator.dupe(u8, status.input[start..end]);
 }
 
-fn parseRegex(allocator: Allocator, status: *Status) ParseError![]const u8 {
+fn parseRegex(allocator: Allocator, status: *Status) anyerror![]const u8 {
     const start = status.i - 1;
 
     while (status.i < status.input.len and !(status.input[status.i] == '/' and (status.i == 0 or status.input[status.i - 1] != '\\'))) {
@@ -516,7 +632,8 @@ fn parseRegex(allocator: Allocator, status: *Status) ParseError![]const u8 {
     }
 
     if (status.i >= status.input.len) {
-        return error.InvalidCharacter;
+        addError(status, "Invalid regex", start, status.i - start);
+        return error.ParseError;
     }
 
     while (status.i < status.input.len and !std.ascii.isWhitespace(status.input[status.i]) and status.input[status.i] != ')') {
@@ -527,7 +644,7 @@ fn parseRegex(allocator: Allocator, status: *Status) ParseError![]const u8 {
 }
 
 /// Convert string value to appropriate type
-fn convertValue(value_str: []const u8, start: i64) ParseError!i64 {
+fn convertValue(value_str: []const u8, start: i64) anyerror!i64 {
     _ = start;
     if (std.mem.eql(u8, value_str, "null")) {
         return 0;

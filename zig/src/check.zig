@@ -245,7 +245,7 @@ fn checkMixSchema(
 
 fn checkAnySchema(
     allocator: Allocator,
-    input: *const std.StringHashMap(Value),
+    input: *const std.StringArrayHashMap(Value),
     schema: AnySchema,
     field: []const u8,
     errors: *std.ArrayList(ValidationError),

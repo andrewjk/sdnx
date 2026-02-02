@@ -10,7 +10,7 @@ pub const Value = union(enum) {
     date: []const u8,
     string: []const u8,
     array: std.ArrayList(Value),
-    object: std.StringHashMap(Value),
+    object: std.StringArrayHashMap(Value),
 
     pub fn deinit(self: *const Value, allocator: Allocator) void {
         const self_mut: *Value = @ptrCast(@constCast(self));
