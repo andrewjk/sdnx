@@ -1,4 +1,4 @@
-export interface CheckError {
+export default interface CheckError {
 	path: string[];
 	message: string;
 }

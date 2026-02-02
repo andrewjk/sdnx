@@ -1,6 +1,6 @@
-import { Validator } from "./Validator";
+import Validator from "./Validator";
 
-export interface FieldSchema {
+export default interface FieldSchema {
 	type: string;
 	description?: string;
 	validators?: Record<string, Validator>;

@@ -1,15 +1,13 @@
-interface Status {
-	input: string;
-	i: number;
-}
+import ParseException from "./types/ParseException";
+import ParseStatus from "./types/ParseStatus";
 
-export function trim(status: Status): void {
+export function trim(status: ParseStatus): void {
 	while (/\s/.test(status.input[status.i])) {
 		status.i++;
 	}
 }
 
-export function accept(char: string, status: Status): boolean {
+export function accept(char: string, status: ParseStatus): boolean {
 	if (status.input[status.i] === char) {
 		status.i++;
 		return true;
@@ -17,12 +15,17 @@ export function accept(char: string, status: Status): boolean {
 	return false;
 }
 
-export function expect(char: string, status: Status): boolean {
+export function expect(char: string, status: ParseStatus): boolean {
 	if (status.input[status.i] === char) {
 		status.i++;
 		return true;
 	}
-	throw new Error(`Expected '${char}' but found '${status.input[status.i]}'`);
+	status.errors.push({
+		message: `Expected '${char}' but found '${status.input[status.i]}'`,
+		index: status.i,
+		length: 1,
+	});
+	throw new ParseException();
 }
 
 export function createRegex(input: string): RegExp | undefined {

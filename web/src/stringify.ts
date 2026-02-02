@@ -1,15 +1,24 @@
 interface Status {
 	indent: number;
 	result: string;
+	ansi: boolean;
+	indentText: string;
+}
+
+interface Options {
+	ansi?: boolean;
+	indent?: string;
 }
 
 /**
  * Converts an object into a string containing Structured Data Notation.
  */
-export default function stringify(obj: Record<PropertyKey, any>): string {
+export default function stringify(obj: Record<PropertyKey, any>, options?: Options): string {
 	let status = {
 		indent: 0,
 		result: "",
+		ansi: options?.ansi ?? false,
+		indentText: options?.indent ?? "\t",
 	};
 
 	printValue(obj, status);
@@ -19,12 +28,12 @@ export default function stringify(obj: Record<PropertyKey, any>): string {
 
 function printValue(obj: any, status: Status) {
 	if (Array.isArray(obj)) {
-		indent(status);
 		status.result += "[";
 		status.indent += 1;
 
 		for (let i = 0; i < obj.length; i++) {
 			status.result += "\n";
+			indent(status);
 			printValue(obj[i], status);
 			if (i < obj.length - 1) {
 				status.result += ",";
@@ -35,8 +44,10 @@ function printValue(obj: any, status: Status) {
 		status.result += "\n";
 		indent(status);
 		status.result += "]";
+	} else if (obj instanceof Date) {
+		const dateStr = formatDate(obj);
+		status.result += status.ansi ? `\x1b[35m${dateStr}\x1b[0m` : dateStr;
 	} else if (typeof obj === "object") {
-		indent(status);
 		status.result += "{";
 		status.indent += 1;
 
@@ -57,13 +68,11 @@ function printValue(obj: any, status: Status) {
 		indent(status);
 		status.result += "}";
 	} else if (typeof obj === "string") {
-		status.result += `"${obj}"`;
+		status.result += status.ansi ? `\x1b[32m"${obj}"\x1b[0m` : `"${obj}"`;
 	} else if (typeof obj === "number") {
-		status.result += String(obj);
+		status.result += status.ansi ? `\x1b[33m${String(obj)}\x1b[0m` : String(obj);
 	} else if (typeof obj === "boolean") {
-		status.result += String(obj);
-	} else if (obj instanceof Date) {
-		status.result += formatDate(obj);
+		status.result += status.ansi ? `\x1b[34m${String(obj)}\x1b[0m` : String(obj);
 	} else if (obj === null) {
 		status.result += "null";
 	} else {
@@ -72,7 +81,7 @@ function printValue(obj: any, status: Status) {
 }
 
 function indent(status: Status) {
-	status.result += "\t".repeat(status.indent);
+	status.result += status.indentText.repeat(status.indent);
 }
 
 function formatDate(date: Date): string {

@@ -1,7 +1,7 @@
-import { FieldSchema } from "./FieldSchema";
-import { SchemaValue } from "./Schema";
+import FieldSchema from "./FieldSchema";
+import SchemaValue from "./SchemaValue";
 
-export interface UnionSchema extends FieldSchema {
+export default interface UnionSchema extends FieldSchema {
 	type: "union";
 	inner: SchemaValue[];
 }

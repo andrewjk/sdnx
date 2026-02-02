@@ -1,17 +1,20 @@
 import convertValue from "./convertValue";
-import { AnySchema } from "./types/AnySchema";
-import { ArraySchema } from "./types/ArraySchema";
-import { FieldSchema } from "./types/FieldSchema";
-import { MixSchema } from "./types/MixSchema";
-import { ObjectSchema } from "./types/ObjectSchema";
-import { Schema, SchemaValue } from "./types/Schema";
-import { UnionSchema } from "./types/UnionSchema";
+import AnySchema from "./types/AnySchema";
+import ArraySchema from "./types/ArraySchema";
+import FieldSchema from "./types/FieldSchema";
+import MixSchema from "./types/MixSchema";
+import ObjectSchema from "./types/ObjectSchema";
+import ParseException from "./types/ParseException";
+import ParseFailure from "./types/ParseFailure";
+import ParseStatus from "./types/ParseStatus";
+import ParseSuccess from "./types/ParseSuccess";
+import Schema from "./types/Schema";
+import SchemaValue from "./types/SchemaValue";
+import UnionSchema from "./types/UnionSchema";
 import { accept, expect, trim } from "./utils";
 import validators from "./validators";
 
-interface Status {
-	input: string;
-	i: number;
+interface ParseSchemaStatus extends ParseStatus {
 	description: string;
 	mix: number;
 	any: number;
@@ -22,10 +25,11 @@ interface Status {
  *
  * @param input The input string.
  */
-export default function parseSchema(input: string): Schema {
-	let status = {
+export default function parseSchema(input: string): ParseSuccess<Schema> | ParseFailure {
+	let status: ParseSchemaStatus = {
 		input,
 		i: 0,
+		errors: [],
 		description: "",
 		mix: 1,
 		any: 1,
@@ -33,14 +37,39 @@ export default function parseSchema(input: string): Schema {
 
 	trim(status);
 
-	if (accept("{", status)) {
-		return parseObject(status);
-	} else {
-		throw new Error(`Expected '{' but found '${status.input[status.i]}'`);
+	try {
+		if (accept("{", status)) {
+			const data = parseObject(status);
+			if (status.errors.length === 0) {
+				return {
+					ok: true,
+					data,
+				};
+			} else {
+				return { ok: false, errors: status.errors };
+			}
+		} else {
+			status.errors.push({
+				message: `Expected '{' but found '${status.input[status.i]}'`,
+				index: 0,
+				length: 1,
+			});
+			throw new ParseException();
+		}
+	} catch (ex) {
+		// Handle our errors and throw others
+		if (ex instanceof ParseException) {
+			return {
+				ok: false,
+				errors: status.errors,
+			};
+		} else {
+			throw ex;
+		}
 	}
 }
 
-function parseObject(status: Status): Schema {
+function parseObject(status: ParseSchemaStatus): Schema {
 	let result: Schema = {};
 	const start = status.i;
 	while (true) {
@@ -48,7 +77,12 @@ function parseObject(status: Status): Schema {
 		if (accept("}", status)) {
 			break;
 		} else if (status.i === status.input.length || accept("]", status)) {
-			throw new Error(`Schema object not closed [${start}]`);
+			status.errors.push({
+				message: "Schema object not closed",
+				index: start,
+				length: 1,
+			});
+			throw new ParseException();
 		}
 
 		parseField(result, status);
@@ -59,27 +93,41 @@ function parseObject(status: Status): Schema {
 	return result;
 }
 
-function parseArray(status: Status): SchemaValue {
+function parseArray(status: ParseSchemaStatus): SchemaValue {
 	trim(status);
 	const start = status.i;
 
 	if (accept("]", status)) {
-		throw new Error(`Schema array empty [${start}]`);
+		status.errors.push({
+			message: "Schema array empty",
+			index: start,
+			length: status.i - start,
+		});
 	} else if (accept("}", status)) {
-		throw new Error(`Schema array not closed [${start}]`);
+		status.errors.push({
+			message: "Schema array not closed",
+			index: start,
+			length: 1,
+		});
+		throw new ParseException();
 	}
 
 	let value = parseValue(status);
 
 	trim(status);
 	if (status.i === status.input.length || !accept("]", status)) {
-		throw new Error(`Schema array not closed [${start}]`);
+		status.errors.push({
+			message: "Schema array not closed",
+			index: start,
+			length: 1,
+		});
+		throw new ParseException();
 	}
 
 	return value;
 }
 
-function parseField(result: Record<string, SchemaValue>, status: Status): void {
+function parseField(result: Record<string, SchemaValue>, status: ParseSchemaStatus): void {
 	trim(status);
 
 	const start = status.i;
@@ -109,7 +157,8 @@ function parseField(result: Record<string, SchemaValue>, status: Status): void {
 		trim(status);
 		expect("(", status);
 		switch (macro) {
-			case "mix":
+			case "mix": {
+				trim(status);
 				expect("{", status);
 				const mixResult: MixSchema = {
 					type: "mix",
@@ -125,7 +174,8 @@ function parseField(result: Record<string, SchemaValue>, status: Status): void {
 				}
 				expect(")", status);
 				break;
-			case "any":
+			}
+			case "any": {
 				trim(status);
 				// Consume until space or `)`
 				const start = status.i;
@@ -144,6 +194,7 @@ function parseField(result: Record<string, SchemaValue>, status: Status): void {
 				const pattern = status.input.substring(start, status.i);
 				trim(status);
 				expect(")", status);
+				trim(status);
 				expect(":", status);
 				const anyResult: AnySchema = {
 					type: pattern,
@@ -151,8 +202,26 @@ function parseField(result: Record<string, SchemaValue>, status: Status): void {
 				};
 				result[`any$${status.mix++}`] = anyResult;
 				break;
-			default:
-				throw new Error(`Unknown macro: '${macro}'`);
+			}
+			default: {
+				// Consume until `)`
+				const start = status.i - macro.length;
+				let level = 1;
+				for (; status.i < status.input.length; status.i++) {
+					const char = status.input[status.i];
+					if (char === "(" && status.input[status.i - 1] !== "\\") {
+						level++;
+					} else if (char === ")" && status.input[status.i - 1] !== "\\") {
+						level--;
+						if (level === 0) break;
+					}
+				}
+				status.errors.push({
+					message: `Unknown macro: '${macro}'`,
+					index: start,
+					length: macro.length,
+				});
+			}
 		}
 		return;
 	}
@@ -162,7 +231,12 @@ function parseField(result: Record<string, SchemaValue>, status: Status): void {
 		name = parseString(status);
 	} else {
 		if (/[^a-zA-Z_]/.test(status.input[status.i])) {
-			throw new Error(`Field must start with quote or alpha [${start}]`);
+			status.errors.push({
+				message: "Field must start with quote or alpha",
+				index: start,
+				length: 1,
+			});
+			throw new ParseException();
 		}
 		status.i++;
 		while (/[a-zA-Z0-9_]/.test(status.input[status.i])) {
@@ -177,7 +251,7 @@ function parseField(result: Record<string, SchemaValue>, status: Status): void {
 	result[name] = parseValue(status);
 }
 
-function parseValue(status: Status): SchemaValue {
+function parseValue(status: ParseSchemaStatus): SchemaValue {
 	let value = parseSingleValue(status);
 
 	trim(status);
@@ -201,7 +275,7 @@ function parseValue(status: Status): SchemaValue {
 	return value;
 }
 
-function parseSingleValue(status: Status): SchemaValue {
+function parseSingleValue(status: ParseSchemaStatus): SchemaValue {
 	trim(status);
 	if (accept("{", status)) {
 		const result: ObjectSchema = {
@@ -221,7 +295,7 @@ function parseSingleValue(status: Status): SchemaValue {
 		return parseType(status);
 	}
 }
-function parseType(status: Status) {
+function parseType(status: ParseSchemaStatus) {
 	// Parse and check the type
 	const start = status.i;
 	while (status.i < status.input.length && /[^\s|,}\]]/.test(status.input[status.i])) {
@@ -229,7 +303,7 @@ function parseType(status: Status) {
 	}
 	const type = status.input.substring(start, status.i).trim();
 	if (!["undef", "null", "bool", "int", "num", "string", "date"].includes(type)) {
-		convertValue(type, -1);
+		convertValue(type, start, status.errors);
 	}
 
 	// Create the field schema
@@ -249,7 +323,11 @@ function parseType(status: Status) {
 		}
 		const validator = status.input.substring(start, status.i);
 		if (validators[type] && !validators[type][validator]) {
-			throw new Error(`Unsupported validator '${validator}'`);
+			status.errors.push({
+				message: `Unsupported validator '${validator}'`,
+				index: start,
+				length: status.i - start,
+			});
 		}
 
 		let raw = "true";
@@ -258,12 +336,13 @@ function parseType(status: Status) {
 		trim(status);
 		if (accept("(", status)) {
 			trim(status);
+			const start = status.i;
 			if (accept('"', status)) {
 				raw = parseString(status, true);
-				required = convertValue(raw, -1);
+				required = convertValue(raw, start, status.errors);
 			} else if (accept("/", status)) {
 				raw = parseRegex(status);
-				required = convertValue(raw, -1);
+				required = convertValue(raw, start, status.errors);
 			} else {
 				// Consume until a space or closing bracket
 				const start = status.i;
@@ -271,7 +350,7 @@ function parseType(status: Status) {
 					status.i++;
 				}
 				raw = status.input.substring(start, status.i);
-				required = convertValue(raw, -1);
+				required = convertValue(raw, start, status.errors);
 			}
 			trim(status);
 			expect(")", status);
@@ -282,26 +361,35 @@ function parseType(status: Status) {
 	return result;
 }
 
-function parseString(status: Status, withQuotes = false) {
+function parseString(status: ParseSchemaStatus, withQuotes = false) {
 	const start = withQuotes ? status.i - 1 : status.i;
 	for (; status.i < status.input.length; status.i++) {
 		if (status.input[status.i] === "\\") {
 			if (status.input[++status.i] !== '"') {
-				throw new Error(`Invalid escape sequence '\\${status.input[status.i]}'`);
+				status.errors.push({
+					message: `Invalid escape sequence '\\${status.input[status.i]}'`,
+					index: status.i - 1,
+					length: 2,
+				});
 			}
 		} else if (status.input[status.i] === '"') {
 			break;
 		}
 	}
 	if (status.i === status.input.length) {
-		throw new Error(`String not closed [${start}]`);
+		status.errors.push({
+			message: "String not closed",
+			index: start,
+			length: 1,
+		});
+		throw new ParseException();
 	}
 	status.i++;
 	const end = withQuotes ? status.i : status.i - 1;
 	return status.input.substring(start, end);
 }
 
-function parseRegex(status: Status) {
+function parseRegex(status: ParseSchemaStatus) {
 	const start = status.i - 1;
 	while (
 		status.i < status.input.length &&
@@ -310,7 +398,12 @@ function parseRegex(status: Status) {
 		status.i++;
 	}
 	if (status.i === status.input.length) {
-		throw new Error(`Regex not closed [${start}]`);
+		status.errors.push({
+			message: "Pattern not closed",
+			index: start,
+			length: 1,
+		});
+		throw new ParseException();
 	}
 	while (status.i < status.input.length && /[^\s)]/.test(status.input[status.i])) {
 		status.i++;

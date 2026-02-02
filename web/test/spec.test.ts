@@ -52,11 +52,17 @@ for (let run of tests) {
 
 	try {
 		const schema = parseSchema(run.schema);
+		if (!schema.ok) {
+			throw new Error(schema.errors[0].message);
+		}
 		const input = parse(run.input);
-		const checkResult = check(input, schema);
+		if (!input.ok) {
+			throw new Error(input.errors[0].message);
+		}
+		const checkResult = check(input.data, schema.data);
 		if (checkResult.ok) {
 			if (run.expected) {
-				result = stringify(input);
+				result = stringify(input.data);
 			} else {
 				run.expected = "OK";
 			}

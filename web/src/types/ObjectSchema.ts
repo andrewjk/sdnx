@@ -1,7 +1,7 @@
-import { FieldSchema } from "./FieldSchema";
-import { Schema } from "./Schema";
+import FieldSchema from "./FieldSchema";
+import Schema from "./Schema";
 
-export interface ObjectSchema extends FieldSchema {
+export default interface ObjectSchema extends FieldSchema {
 	type: "object";
 	inner: Schema;
 }

@@ -3,8 +3,10 @@ import path from "node:path";
 import check from "./check";
 import parse from "./parse";
 import parseSchema from "./parseSchema";
-import { CheckError } from "./types/CheckError";
-import { Schema } from "./types/Schema";
+import CheckError from "./types/CheckError";
+import ParseError from "./types/ParseError";
+import ReadError from "./types/ReadError";
+import Schema from "./types/Schema";
 
 interface ReadSuccess {
 	ok: true;
@@ -13,15 +15,24 @@ interface ReadSuccess {
 
 interface ReadFailure {
 	ok: false;
-	data: Record<string, any>;
-	errors: CheckError[];
+	schemaErrors: ReadError[];
+	dataErrors: ReadError[];
+	checkErrors: CheckError[];
 }
 
 export default function read(file: string, schema?: string | Schema): ReadSuccess | ReadFailure {
 	file = locate(file);
 
 	const contents = fs.readFileSync(file, "utf-8");
-	const data = parse(contents);
+	const parsed = parse(contents);
+	if (!parsed.ok) {
+		return {
+			ok: false,
+			schemaErrors: parsed.errors.map((e) => buildReadError(e, contents)),
+			dataErrors: [],
+			checkErrors: [],
+		};
+	}
 
 	// If there's a @schema directive, try to load the schema from there
 	if (schema === undefined) {
@@ -36,12 +47,33 @@ export default function read(file: string, schema?: string | Schema): ReadSucces
 	if (typeof schema === "string") {
 		schema = locate(schema);
 		const schemaContents = fs.readFileSync(schema, "utf-8");
-		schema = parseSchema(schemaContents);
+		const schemaParsed = parseSchema(schemaContents);
+		if (schemaParsed.ok) {
+			schema = schemaParsed.data;
+		} else {
+			return {
+				ok: false,
+				schemaErrors: schemaParsed.errors.map((e) => buildReadError(e, schemaContents)),
+				dataErrors: [],
+				checkErrors: [],
+			};
+		}
 	}
 
-	const checked = check(data, schema);
-
-	return Object.assign(checked, { data });
+	const checked = check(parsed.data, schema);
+	if (checked.ok) {
+		return {
+			ok: true,
+			data: parsed.data,
+		};
+	} else {
+		return {
+			ok: false,
+			schemaErrors: [],
+			dataErrors: [],
+			checkErrors: checked.errors,
+		};
+	}
 }
 
 function locate(file: string) {
@@ -53,4 +85,23 @@ function locate(file: string) {
 		}
 	}
 	return file;
+}
+
+function buildReadError(e: ParseError, contents: string): ReadError {
+	let lineIndex = e.index;
+	while (lineIndex >= 0 && contents[lineIndex] !== "\n") {
+		lineIndex--;
+	}
+	lineIndex++;
+	let lineEndIndex = e.index;
+	while (lineEndIndex < contents.length && contents[lineEndIndex] !== "\n") {
+		lineEndIndex++;
+	}
+	return {
+		message: e.message,
+		index: e.index,
+		length: e.length,
+		line: contents.substring(lineIndex, lineEndIndex),
+		char: e.index - lineIndex,
+	};
 }

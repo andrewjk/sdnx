@@ -1,20 +1,22 @@
 import convertValue from "./convertValue";
+import ParseException from "./types/ParseException";
+import ParseFailure from "./types/ParseFailure";
+import ParseStatus from "./types/ParseStatus";
+import ParseSuccess from "./types/ParseSuccess";
 import { accept, expect, trim } from "./utils";
-
-interface Status {
-	input: string;
-	i: number;
-}
 
 /**
  * Parses some structured data from a string into an object.
  *
  * @param input The input string.
  */
-export default function parse(input: string): Record<PropertyKey, any> {
-	let status = {
+export default function parse(
+	input: string,
+): ParseSuccess<Record<PropertyKey, any>> | ParseFailure {
+	let status: ParseStatus = {
 		input,
 		i: 0,
+		errors: [],
 	};
 
 	trim(status);
@@ -31,14 +33,39 @@ export default function parse(input: string): Record<PropertyKey, any> {
 		}
 	}
 
-	if (accept("{", status)) {
-		return parseObject(status);
-	} else {
-		throw new Error(`Expected '{' but found '${status.input[status.i]}'`);
+	try {
+		if (accept("{", status)) {
+			const data = parseObject(status);
+			if (status.errors.length === 0) {
+				return {
+					ok: true,
+					data,
+				};
+			} else {
+				return { ok: false, errors: status.errors };
+			}
+		} else {
+			status.errors.push({
+				message: `Expected '{' but found '${status.input[status.i]}'`,
+				index: 0,
+				length: 1,
+			});
+			throw new ParseException();
+		}
+	} catch (ex) {
+		// Handle our errors and throw others
+		if (ex instanceof ParseException) {
+			return {
+				ok: false,
+				errors: status.errors,
+			};
+		} else {
+			throw ex;
+		}
 	}
 }
 
-function parseObject(status: Status) {
+function parseObject(status: ParseStatus) {
 	let result: Record<PropertyKey, any> = {};
 	const start = status.i;
 	while (true) {
@@ -46,7 +73,12 @@ function parseObject(status: Status) {
 		if (accept("}", status)) {
 			break;
 		} else if (status.i === status.input.length || accept("]", status)) {
-			throw new Error(`Object not closed [${start}]`);
+			status.errors.push({
+				message: "Object not closed",
+				index: start,
+				length: 1,
+			});
+			throw new ParseException();
 		}
 
 		parseField(result, status);
@@ -57,7 +89,7 @@ function parseObject(status: Status) {
 	return result;
 }
 
-function parseArray(status: Status) {
+function parseArray(status: ParseStatus) {
 	let result: any[] = [];
 	const start = status.i;
 	while (true) {
@@ -65,7 +97,12 @@ function parseArray(status: Status) {
 		if (accept("]", status)) {
 			break;
 		} else if (status.i === status.input.length || accept("}", status)) {
-			throw new Error(`Array not closed [${start}]`);
+			status.errors.push({
+				message: "Array not closed",
+				index: start,
+				length: 1,
+			});
+			throw new ParseException();
 		} else if (result.length > 0) {
 			expect(",", status);
 			trim(status);
@@ -77,7 +114,7 @@ function parseArray(status: Status) {
 	return result;
 }
 
-function parseField(result: Record<PropertyKey, any>, status: Status) {
+function parseField(result: Record<PropertyKey, any>, status: ParseStatus) {
 	trim(status);
 
 	if (accept("#", status)) {
@@ -101,7 +138,12 @@ function parseField(result: Record<PropertyKey, any>, status: Status) {
 		}
 		name = status.input.substring(start, status.i);
 	} else {
-		throw new Error(`Field must start with quote or alpha [${start}]`);
+		status.errors.push({
+			message: "Field must start with quote or alpha",
+			index: start,
+			length: 1,
+		});
+		throw new ParseException();
 	}
 
 	trim(status);
@@ -110,7 +152,7 @@ function parseField(result: Record<PropertyKey, any>, status: Status) {
 	result[name] = parseValue(status);
 }
 
-function parseValue(status: Status) {
+function parseValue(status: ParseStatus) {
 	trim(status);
 	if (accept("{", status)) {
 		return parseObject(status);
@@ -125,23 +167,32 @@ function parseValue(status: Status) {
 			status.i++;
 		}
 		const value = status.input.substring(start, status.i).trim();
-		return convertValue(value, start);
+		return convertValue(value, start, status.errors);
 	}
 }
 
-function parseString(status: Status) {
+function parseString(status: ParseStatus) {
 	const start = status.i;
 	for (; status.i < status.input.length; status.i++) {
 		if (status.input[status.i] === "\\") {
 			if (status.input[++status.i] !== '"') {
-				throw new Error(`Invalid escape sequence '\\${status.input[status.i]}'`);
+				status.errors.push({
+					message: `Invalid escape sequence '\\${status.input[status.i]}'`,
+					index: status.i - 1,
+					length: 2,
+				});
 			}
 		} else if (status.input[status.i] === '"') {
 			break;
 		}
 	}
 	if (status.i === status.input.length) {
-		throw new Error(`String not closed [${start}]`);
+		status.errors.push({
+			message: "String not closed",
+			index: start,
+			length: 1,
+		});
+		throw new ParseException();
 	}
 	status.i++;
 	let value = status.input.substring(start, status.i - 1);
@@ -153,7 +204,7 @@ function parseString(status: Status) {
 	return value;
 }
 
-function parseComment(status: Status) {
+function parseComment(status: ParseStatus) {
 	for (; status.i < status.input.length; status.i++) {
 		if (status.input[status.i] === "\n") {
 			break;
@@ -161,7 +212,7 @@ function parseComment(status: Status) {
 	}
 }
 
-function parseMacro(status: Status) {
+function parseMacro(status: ParseStatus) {
 	// Consume until space or `(`
 	const start = status.i;
 	while (/[^\s(]/.test(status.input[status.i])) {
@@ -181,6 +232,22 @@ function parseMacro(status: Status) {
 			expect(")", status);
 			break;
 		default:
-			throw new Error(`Unknown macro: '${macro}'`);
+			// Consume until `)`
+			const start = status.i - macro.length;
+			let level = 1;
+			for (; status.i < status.input.length; status.i++) {
+				const char = status.input[status.i];
+				if (char === "(" && status.input[status.i - 1] !== "\\") {
+					level++;
+				} else if (char === ")" && status.input[status.i - 1] !== "\\") {
+					level--;
+					if (level === 0) break;
+				}
+			}
+			status.errors.push({
+				message: `Unknown macro: '${macro}'`,
+				index: start,
+				length: macro.length,
+			});
 	}
 }

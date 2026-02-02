@@ -1,11 +1,13 @@
-import { AnySchema } from "./types/AnySchema";
-import { ArraySchema } from "./types/ArraySchema";
-import { CheckError } from "./types/CheckError";
-import { FieldSchema } from "./types/FieldSchema";
-import { MixSchema } from "./types/MixSchema";
-import { ObjectSchema } from "./types/ObjectSchema";
-import { Schema, SchemaValue } from "./types/Schema";
-import { UnionSchema } from "./types/UnionSchema";
+import AnySchema from "./types/AnySchema";
+import ArraySchema from "./types/ArraySchema";
+import CheckError from "./types/CheckError";
+import CheckStatus from "./types/CheckStatus";
+import FieldSchema from "./types/FieldSchema";
+import MixSchema from "./types/MixSchema";
+import ObjectSchema from "./types/ObjectSchema";
+import Schema from "./types/Schema";
+import SchemaValue from "./types/SchemaValue";
+import UnionSchema from "./types/UnionSchema";
 import { createRegex } from "./utils";
 import validators from "./validators";
 
@@ -18,56 +20,55 @@ interface CheckFailure {
 	errors: CheckError[];
 }
 
-// TODO:
-//interface Status {
-//	path: string[];
-//	errors: Error[];
-//}
-
 export default function check(
 	input: Record<PropertyKey, unknown>,
 	schema: Schema,
 ): CheckSuccess | CheckFailure {
-	let errors: CheckError[] = [];
+	let status: CheckStatus = {
+		path: [],
+		errors: [],
+	};
 
-	checkObjectSchemaInner(input, schema, errors);
+	checkObjectSchemaInner(input, schema, status);
 
-	if (errors.length === 0) {
+	if (status.errors.length === 0) {
 		return { ok: true };
 	} else {
-		return { ok: false, errors };
+		return { ok: false, errors: status.errors };
 	}
 }
 
 function checkObjectSchema(
 	input: Record<PropertyKey, unknown>,
 	schema: ObjectSchema,
-	errors: CheckError[],
+	status: CheckStatus,
 ): boolean {
-	return checkObjectSchemaInner(input, schema.inner, errors);
+	return checkObjectSchemaInner(input, schema.inner, status);
 }
 
 function checkObjectSchemaInner(
 	input: Record<PropertyKey, unknown>,
 	schema: Schema,
-	errors: CheckError[],
+	status: CheckStatus,
 ): boolean {
 	let result = true;
 	for (let [field, fieldSchema] of Object.entries(schema)) {
+		status.path.push(field);
 		if (field.startsWith("mix$")) {
-			if (!checkMixSchema(input, fieldSchema as MixSchema, errors)) {
+			if (!checkMixSchema(input, fieldSchema as MixSchema, status)) {
 				result = false;
 			}
 		} else if (field.startsWith("any$")) {
-			if (!checkAnySchema(input, fieldSchema as AnySchema, field, errors)) {
+			if (!checkAnySchema(input, fieldSchema as AnySchema, field, status)) {
 				result = false;
 			}
 		} else {
 			const value = input[field];
-			if (!checkFieldSchema(value, fieldSchema, field, errors)) {
+			if (!checkFieldSchema(value, fieldSchema, field, status)) {
 				result = false;
 			}
 		}
+		status.path.pop();
 	}
 	return result;
 }
@@ -75,35 +76,35 @@ function checkObjectSchemaInner(
 function checkArraySchema(
 	input: Record<PropertyKey, unknown>[],
 	schema: ArraySchema,
-	errors: CheckError[],
+	status: CheckStatus,
 ): boolean {
 	let result = true;
 	for (let [i, value] of input.entries()) {
-		if (!checkFieldSchema(value, schema.inner, i.toString(), errors)) {
+		status.path.push(String(i));
+		if (!checkFieldSchema(value, schema.inner, i.toString(), status)) {
 			result = false;
 		}
+		status.path.pop();
 	}
 	return result;
 }
 
-function checkUnionSchema(
-	value: unknown,
-	schema: UnionSchema,
-	field: string,
-	errors: CheckError[],
-) {
-	let fieldErrors: CheckError[] = [];
+function checkUnionSchema(value: unknown, schema: UnionSchema, field: string, status: CheckStatus) {
+	let fieldStatus: CheckStatus = {
+		path: [...status.path],
+		errors: [],
+	};
 	let ok = false;
 	for (let fs of schema.inner) {
-		if (checkFieldSchema(value, fs, field, fieldErrors)) {
+		if (checkFieldSchema(value, fs, field, fieldStatus)) {
 			ok = true;
 			break;
 		}
 	}
 	if (!ok) {
-		errors.push({
-			path: [],
-			message: fieldErrors.map((e) => e.message).join(" | "),
+		status.errors.push({
+			path: [...status.path],
+			message: fieldStatus.errors.map((e) => e.message).join(" | "),
 		});
 	}
 	return ok;
@@ -112,7 +113,7 @@ function checkUnionSchema(
 function checkMixSchema(
 	input: Record<PropertyKey, unknown>,
 	schema: MixSchema,
-	errors: CheckError[],
+	status: CheckStatus,
 ) {
 	let fieldErrors: CheckError[] = [];
 	let ok = false;
@@ -123,14 +124,14 @@ function checkMixSchema(
 			break;
 		} else {
 			fieldErrors.push({
-				path: [],
+				path: [...status.path],
 				message: mixResult.errors.map((e) => e.message).join(" & "),
 			});
 		}
 	}
 	if (!ok) {
-		errors.push({
-			path: [],
+		status.errors.push({
+			path: [...status.path],
 			message: fieldErrors.map((e) => e.message).join(" | "),
 		});
 	}
@@ -141,7 +142,7 @@ function checkAnySchema(
 	input: Record<PropertyKey, unknown>,
 	schema: AnySchema,
 	field: string,
-	errors: CheckError[],
+	status: CheckStatus,
 ) {
 	let result = true;
 	for (let [anyField, value] of Object.entries(input)) {
@@ -150,15 +151,15 @@ function checkAnySchema(
 			const regexp = createRegex(schema.type);
 			if (regexp === undefined) {
 				// This should never happen...
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `Unsupported pattern for '${field}': ${schema.type}`,
 				});
 				return false;
 			}
 			if (!regexp.test(anyField)) {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${anyField}' name doesn't match pattern '${schema.type}'`,
 				});
 				return false;
@@ -166,7 +167,7 @@ function checkAnySchema(
 		}
 
 		// Run the field's validators
-		if (!checkFieldSchema(value, schema.inner, anyField, errors)) {
+		if (!checkFieldSchema(value, schema.inner, anyField, status)) {
 			result = false;
 		}
 	}
@@ -177,30 +178,30 @@ function checkFieldSchema(
 	value: unknown,
 	schema: SchemaValue,
 	field: string,
-	errors: CheckError[],
+	status: CheckStatus,
 ): boolean {
 	if (schema.type === "object") {
 		if (value === null || typeof value !== "object") {
-			errors.push({
-				path: [],
+			status.errors.push({
+				path: [...status.path],
 				message: `'${field}' must be an object`,
 			});
 			return false;
 		}
-		return checkObjectSchema(value as Record<PropertyKey, unknown>, schema as ObjectSchema, errors);
+		return checkObjectSchema(value as Record<PropertyKey, unknown>, schema as ObjectSchema, status);
 	} else if (schema.type === "array") {
 		if (!Array.isArray(value)) {
-			errors.push({
-				path: [],
+			status.errors.push({
+				path: [...status.path],
 				message: `'${field}' must be an array`,
 			});
 			return false;
 		}
-		return checkArraySchema(value, schema as ArraySchema, errors);
+		return checkArraySchema(value, schema as ArraySchema, status);
 	} else if (schema.type === "union") {
-		return checkUnionSchema(value, schema as UnionSchema, field, errors);
+		return checkUnionSchema(value, schema as UnionSchema, field, status);
 	} else {
-		return checkFieldSchemaValue(value, schema, field, errors);
+		return checkFieldSchemaValue(value, schema, field, status);
 	}
 }
 
@@ -208,11 +209,11 @@ function checkFieldSchemaValue(
 	value: unknown,
 	schema: FieldSchema,
 	field: string,
-	errors: CheckError[],
+	status: CheckStatus,
 ): boolean {
 	if (value === undefined && schema.type !== "undef") {
-		errors.push({
-			path: [],
+		status.errors.push({
+			path: [...status.path],
 			message: `Field not found: ${field}`,
 		});
 		return false;
@@ -222,8 +223,8 @@ function checkFieldSchemaValue(
 	switch (schema.type) {
 		case "undef":
 			if (value !== undefined) {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be undefined`,
 				});
 				return false;
@@ -231,8 +232,8 @@ function checkFieldSchemaValue(
 			break;
 		case "bool":
 			if (typeof value !== "boolean") {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be a boolean value`,
 				});
 				return false;
@@ -240,8 +241,8 @@ function checkFieldSchemaValue(
 			break;
 		case "int":
 			if (typeof value !== "number" || !Number.isInteger(value)) {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be an integer value`,
 				});
 				return false;
@@ -249,8 +250,8 @@ function checkFieldSchemaValue(
 			break;
 		case "num":
 			if (typeof value !== "number") {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be a number value`,
 				});
 				return false;
@@ -258,8 +259,8 @@ function checkFieldSchemaValue(
 			break;
 		case "date":
 			if (value instanceof Date === false) {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be a date value`,
 				});
 				return false;
@@ -267,8 +268,8 @@ function checkFieldSchemaValue(
 			break;
 		case "string":
 			if (typeof value !== "string") {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be a string value`,
 				});
 				return false;
@@ -281,8 +282,8 @@ function checkFieldSchemaValue(
 				expectedType = expectedType.substring(1, expectedType.length - 1);
 			}
 			if (String(expectedType) !== String(value)) {
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `'${field}' must be '${expectedType}'`,
 				});
 				return false;
@@ -301,13 +302,13 @@ function checkFieldSchemaValue(
 
 			const validate = validators[schema.type][method];
 			if (validate !== undefined) {
-				if (!validate(field, value, raw, required, errors)) {
+				if (!validate(field, value, raw, required, status)) {
 					return false;
 				}
 			} else {
 				// This should never happen...
-				errors.push({
-					path: [],
+				status.errors.push({
+					path: [...status.path],
 					message: `Unsupported validation method for '${field}': ${method}`,
 				});
 				return false;

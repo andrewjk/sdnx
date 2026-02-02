@@ -1,7 +1,7 @@
-import { FieldSchema } from "./FieldSchema";
-import { SchemaValue } from "./Schema";
+import FieldSchema from "./FieldSchema";
+import SchemaValue from "./SchemaValue";
 
-export interface AnySchema extends FieldSchema {
+export default interface AnySchema extends FieldSchema {
 	type: string;
 	inner: SchemaValue;
 }

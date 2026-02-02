@@ -1,3 +1,5 @@
+import ParseError from "./types/ParseError";
+
 let intRegex = new RegExp(/^(\+|-)?[\d_]+$/);
 let hexRegex = new RegExp(/^(\+|-)?0x[0-9a-f]+$/i);
 let floatRegex = new RegExp(/^(\+|-)?[\d_]+\.[\d_]+$/);
@@ -10,7 +12,7 @@ let dateTimeRegex = new RegExp(
 	/\d{4}-\d{2}-\d{2}(?:T| )\d{2}:\d{2}(?:\d{2})? ?(?:U|L|(?:(?:\+|-)\d{2}:\d{2}))?/,
 );
 
-export default function convertValue(value: string, start: number): any {
+export default function convertValue(value: string, start: number, errors: ParseError[]): any {
 	if (value === "null") {
 		return null;
 	} else if (value === "true") {
@@ -28,7 +30,11 @@ export default function convertValue(value: string, start: number): any {
 	} else if (dateRegex.test(value) || dateTimeRegex.test(value)) {
 		const date = new Date(value.replace("U", "Z").replace("L", ""));
 		if (isNaN(date.getTime())) {
-			throw new Error(`Invalid date '${value}' [${start}]`);
+			errors.push({
+				message: `Invalid date '${value}'`,
+				index: start,
+				length: value.length,
+			});
 		}
 		return date;
 	} else if (timeRegex.test(value)) {
@@ -37,10 +43,18 @@ export default function convertValue(value: string, start: number): any {
 			"1900-01-01T" + value.replace("U", "Z").replace("L", "").replace(" ", ""),
 		);
 		if (isNaN(date.getTime())) {
-			throw new Error(`Invalid time '${value}' [${start}]`);
+			errors.push({
+				message: `Invalid time '${value}'`,
+				index: start,
+				length: value.length,
+			});
 		}
 		return date;
 	} else {
-		throw new Error(`Unsupported value type '${value}' [${start}]`);
+		errors.push({
+			message: `Unsupported value type '${value}'`,
+			index: start,
+			length: value.length,
+		});
 	}
 }

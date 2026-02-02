@@ -15,7 +15,7 @@
 		"build": "tsgo --noEmit && tsdown",
 		"format": "prettier --write .",
 		"test": "vitest",
-		"dev": "tsx src/bin/index.ts test/employee.sdn"
+		"cli": "tsx src/bin/index.ts ../sample/employee.sdn"
 	},
 	"keywords": [],
 	"author": "",
