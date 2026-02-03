@@ -1,27 +1,15 @@
 import Foundation
 
+// MARK: - Parse Schema Result Types
 
-// MARK: - Parsing Status
-
-private struct Status {
-    let input: String
-    var i: String.Index
-    var description: String
-    var mix: Int
-    var any: Int
-    
-    init(input: String) {
-        self.input = input
-        self.i = input.startIndex
-        self.description = ""
-        self.mix = 1
-        self.any = 1
-    }
+public enum ParseSchemaResult {
+    case success(ParseSuccess<Schema>)
+    case failure(ParseFailure)
 }
 
-// MARK: - Main Parser
+// MARK: - Internal Error Types
 
-public enum ParseSchemaError: Error {
+private enum InternalParseSchemaError: Error {
     case unexpectedCharacter(expected: String, found: String)
     case schemaNotClosed(start: String.Index)
     case emptyArray(start: String.Index)
@@ -36,16 +24,60 @@ public enum ParseSchemaError: Error {
     case invalidTime(String, start: String.Index)
 }
 
-public func parseSchema(_ input: String) throws -> Schema {
+private enum ParseException: Error {
+    case earlyExit
+}
+
+// MARK: - Parsing Status
+
+private struct Status {
+    let input: String
+    var i: String.Index
+    var description: String
+    var mix: Int
+    var any: Int
+    var errors: [ParseError]
+    
+    init(input: String) {
+        self.input = input
+        self.i = input.startIndex
+        self.description = ""
+        self.mix = 1
+        self.any = 1
+        self.errors = []
+    }
+}
+
+// MARK: - Main Parser
+
+public func parseSchema(_ input: String) -> ParseSchemaResult {
     var status = Status(input: input)
     
     trim(&status)
     
-    if accept("{", &status) {
-        return try parseObject(&status)
-    } else {
-        let found = status.i < status.input.endIndex ? String(status.input[status.i]) : "EOF"
-        throw ParseSchemaError.unexpectedCharacter(expected: "{", found: found)
+    do {
+        if accept("{", &status) {
+            let data = try parseObject(&status)
+            if status.errors.isEmpty {
+                return .success(ParseSuccess(data: data))
+            } else {
+                return .failure(ParseFailure(errors: status.errors))
+            }
+        } else {
+            let found = status.i < status.input.endIndex ? String(status.input[status.i]) : "EOF"
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: status.i)
+            status.errors.append(ParseError(
+                message: "Expected '{' but found '\(found)'",
+                index: index,
+                length: 1
+            ))
+            throw ParseException.earlyExit
+        }
+    } catch ParseException.earlyExit {
+        return .failure(ParseFailure(errors: status.errors))
+    } catch {
+        return .failure(ParseFailure(errors: status.errors))
     }
 }
 
@@ -68,12 +100,26 @@ private func accept(_ char: String, _ status: inout Status) -> Bool {
 
 private func expect(_ char: String, _ status: inout Status) throws {
     guard status.i < status.input.endIndex else {
-        throw ParseSchemaError.unexpectedCharacter(expected: char, found: "EOF")
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: status.i)
+        status.errors.append(ParseError(
+            message: "Expected '\(char)' but found EOF",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     if status.input[status.i] == char.first! {
         status.input.formIndex(after: &status.i)
     } else {
-        throw ParseSchemaError.unexpectedCharacter(expected: char, found: String(status.input[status.i]))
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: status.i)
+        status.errors.append(ParseError(
+            message: "Expected '\(char)' but found '\(status.input[status.i])'",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
 }
 
@@ -89,7 +135,14 @@ private func parseObject(_ status: inout Status) throws -> Schema {
         if accept("}", &status) {
             break
         } else if status.i >= status.input.endIndex || accept("]", &status) {
-            throw ParseSchemaError.schemaNotClosed(start: start)
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: start)
+            status.errors.append(ParseError(
+                message: "Schema object not closed",
+                index: index,
+                length: 1
+            ))
+            throw ParseException.earlyExit
         }
         
         try parseField(&result, &status)
@@ -106,16 +159,37 @@ private func parseArray(_ status: inout Status) throws -> SchemaValue {
     let start = status.i
     
     if accept("]", &status) {
-        throw ParseSchemaError.emptyArray(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        let length = status.input.distance(from: start, to: status.i)
+        status.errors.append(ParseError(
+            message: "Schema array empty",
+            index: index,
+            length: length
+        ))
     } else if accept("}", &status) {
-        throw ParseSchemaError.schemaNotClosed(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        status.errors.append(ParseError(
+            message: "Schema array not closed",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     
     let value = try parseValue(&status)
     
     trim(&status)
     if status.i >= status.input.endIndex || !accept("]", &status) {
-        throw ParseSchemaError.schemaNotClosed(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        status.errors.append(ParseError(
+            message: "Schema array not closed",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     
     return value
@@ -191,7 +265,14 @@ private func parseField(_ result: inout Schema, _ status: inout Status) throws {
             status.any += 1
             
         default:
-            throw ParseSchemaError.unknownMacro(macro)
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: status.input.index(status.i, offsetBy: -macro.count))
+            status.errors.append(ParseError(
+                message: "Unknown macro: '\(macro)'",
+                index: index,
+                length: macro.count
+            ))
+            throw ParseException.earlyExit
         }
         return
     }
@@ -201,7 +282,14 @@ private func parseField(_ result: inout Schema, _ status: inout Status) throws {
         name = try parseString(&status)
     } else {
         if status.i >= status.input.endIndex || !isAlphaOrUnderscore(status.input[status.i]) {
-            throw ParseSchemaError.invalidFieldName(start: start)
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: start)
+            status.errors.append(ParseError(
+                message: "Field must start with quote or alpha",
+                index: index,
+                length: 1
+            ))
+            throw ParseException.earlyExit
         }
         status.input.formIndex(after: &status.i)
         while status.i < status.input.endIndex && isAlphaNumericOrUnderscore(status.input[status.i]) {
@@ -260,7 +348,8 @@ private func parseType(_ status: inout Status) throws -> FieldSchema {
     // Validate type
     let validTypes = ["undef", "null", "bool", "int", "num", "string", "date"]
     if !validTypes.contains(type) {
-        _ = try convertValue(type, start: -1)
+        let index = status.input.distance(from: status.input.startIndex, to: start)
+        _ = convertValue(type, start: index, errors: &status.errors)
     }
     
     var result = FieldSchema(type: type)
@@ -288,17 +377,20 @@ private func parseType(_ status: inout Status) throws -> FieldSchema {
             trim(&status)
             if accept("\"", &status) {
                 raw = try parseString(&status, withQuotes: true)
-                required = try convertValue(raw, start: -1)
+                let index = status.input.distance(from: status.input.startIndex, to: start)
+                required = convertValue(raw, start: index, errors: &status.errors)
             } else if accept("/", &status) {
                 raw = try parseRegex(&status)
-                required = try convertValue(raw, start: -1)
+                let index = status.input.distance(from: status.input.startIndex, to: start)
+                required = convertValue(raw, start: index, errors: &status.errors)
             } else {
                 let valStart = status.i
                 while status.i < status.input.endIndex && !status.input[status.i].isWhitespace && status.input[status.i] != ")" {
                     status.input.formIndex(after: &status.i)
                 }
                 raw = String(status.input[valStart..<status.i])
-                required = try convertValue(raw, start: -1)
+                let index = status.input.distance(from: status.input.startIndex, to: start)
+                required = convertValue(raw, start: index, errors: &status.errors)
             }
             trim(&status)
             try expect(")", &status)
@@ -323,7 +415,13 @@ private func parseString(_ status: inout Status, withQuotes: Bool = false) throw
             status.input.formIndex(after: &status.i)
             if status.i >= status.input.endIndex || status.input[status.i] != "\"" {
                 let escapeChar = status.i < status.input.endIndex ? String(status.input[status.i]) : "EOF"
-                throw ParseSchemaError.invalidEscapeSequence("\\\(escapeChar)")
+                let startIndex = status.input.startIndex
+                let index = status.input.distance(from: startIndex, to: status.input.index(before: status.i))
+                status.errors.append(ParseError(
+                    message: "Invalid escape sequence '\\\(escapeChar)'",
+                    index: index,
+                    length: 2
+                ))
             }
             status.input.formIndex(after: &status.i)
         } else if status.input[status.i] == "\"" {
@@ -334,7 +432,14 @@ private func parseString(_ status: inout Status, withQuotes: Bool = false) throw
     }
     
     if status.i >= status.input.endIndex {
-        throw ParseSchemaError.stringNotClosed(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        status.errors.append(ParseError(
+            message: "String not closed",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     
     status.input.formIndex(after: &status.i)
@@ -353,7 +458,14 @@ private func parseRegex(_ status: inout Status) throws -> String {
     }
     
     if status.i >= status.input.endIndex {
-        throw ParseSchemaError.regexNotClosed(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        status.errors.append(ParseError(
+            message: "Pattern not closed",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     
     while status.i < status.input.endIndex && !status.input[status.i].isWhitespace && status.input[status.i] != ")" {

@@ -1,5 +1,13 @@
 import Foundation
 
+// MARK: - Internal Error Types for Old API
+
+private enum ConvertValueError: Error {
+    case invalidDate(String, start: String.Index)
+    case invalidTime(String, start: String.Index)
+    case unsupportedValueType(String, start: String.Index)
+}
+
 // MARK: - Date/Time Normalization
 
 /// Normalizes a datetime string to ISO8601 format with seconds.
@@ -131,7 +139,8 @@ private func parseTime(_ value: String) -> Date? {
 
 // MARK: - Convert Value
 
-public func convertValue(_ value: String, start: String.Index) throws -> Any? {
+// Convert value with error collection (for parsing)
+public func convertValue(_ value: String, start: Int, errors: inout [ParseError]) -> Any? {
     // HACK: Can't figure out how to wrangle Swift nils
     if value == "null" {
         return "null"
@@ -160,72 +169,43 @@ public func convertValue(_ value: String, start: String.Index) throws -> Any? {
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         formatter.timeZone = TimeZone(identifier: "UTC")
         guard let date = formatter.date(from: dateStr) else {
-            throw ParseError.invalidDate(value, start: start)
+            errors.append(ParseError(
+                message: "Invalid date '\(value)'",
+                index: start,
+                length: value.count
+            ))
+            return nil
         }
         return date
     } else if isDateTimeValue(value) {
         // DateTime with time component
         guard let date = parseDateTime(value) else {
-            throw ParseError.invalidDate(value, start: start)
+            errors.append(ParseError(
+                message: "Invalid date '\(value)'",
+                index: start,
+                length: value.count
+            ))
+            return nil
         }
         return date
     } else if isTimeValue(value) {
         // Time-only value
         guard let date = parseTime(value) else {
-            throw ParseError.invalidTime(value, start: start)
+            errors.append(ParseError(
+                message: "Invalid time '\(value)'",
+                index: start,
+                length: value.count
+            ))
+            return nil
         }
         return date
     } else {
-        throw ParseError.unsupportedValueType(value, start: start)
-    }
-}
-
-// For use in ParseSchema.swift which uses Int for start position
-public func convertValue(_ value: String, start: Int) throws -> Any? {
-    if value == "null" {
+        errors.append(ParseError(
+            message: "Unsupported value type '\(value)'",
+            index: start,
+            length: value.count
+        ))
         return nil
-    } else if value == "true" {
-        return true
-    } else if value == "false" {
-        return false
-    } else if isStringValue(value) {
-        return String(value.dropFirst().dropLast())
-    } else if isRegexValue(value) {
-        return value
-    } else if isIntValue(value) || isHexValue(value) {
-        let cleaned = value.replacingOccurrences(of: "_", with: "")
-        if isHexValue(value) {
-            let hexString = String(cleaned.dropFirst(2))
-            return Int(hexString, radix: 16)
-        }
-        return Int(cleaned)
-    } else if isFloatValue(value) || isScientificValue(value) {
-        let cleaned = value.replacingOccurrences(of: "_", with: "")
-        return Double(cleaned)
-    } else if isDateValue(value) {
-        // Plain date without time component
-        let dateStr = value + "T00:00:00"
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        guard let date = formatter.date(from: dateStr) else {
-            throw ParseSchemaError.invalidDate(value, start: String.Index(utf16Offset: start, in: value))
-        }
-        return date
-    } else if isDateTimeValue(value) {
-        // DateTime with time component
-        guard let date = parseDateTime(value) else {
-            throw ParseSchemaError.invalidDate(value, start: String.Index(utf16Offset: start, in: value))
-        }
-        return date
-    } else if isTimeValue(value) {
-        // Time-only value
-        guard let date = parseTime(value) else {
-            throw ParseSchemaError.invalidTime(value, start: String.Index(utf16Offset: start, in: value))
-        }
-        return date
-    } else {
-        throw ParseSchemaError.unsupportedValueType(value, start: String.Index(utf16Offset: start, in: value))
     }
 }
 

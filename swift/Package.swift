@@ -11,6 +11,10 @@ let package = Package(
             name: "sdnx",
             targets: ["sdnx"]
         ),
+        .executable(
+            name: "sdnx-cli",
+            targets: ["sdnx-cli"]
+        ),
     ],
     dependencies: [
         .package(
@@ -19,13 +23,17 @@ let package = Package(
         )
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
+        // Targets are the basic building blocks of a package, defining a module or test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "sdnx",
             dependencies: [
                 .product(name: "Collections", package: "swift-collections")
             ]
+        ),
+        .executableTarget(
+            name: "sdnx-cli",
+            dependencies: ["sdnx"]
         ),
         .testTarget(
             name: "sdnxTests",

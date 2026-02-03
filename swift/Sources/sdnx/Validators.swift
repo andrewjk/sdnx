@@ -7,7 +7,7 @@ typealias ValidatorFunction = @Sendable (
     _ value: Any,
     _ raw: String,
     _ required: Any,
-    _ errors: inout [CheckError]
+    _ status: inout CheckStatus
 ) -> Bool
 
 // MARK: - Validators Dictionary
@@ -37,15 +37,15 @@ func getValidators() -> [String: [String: ValidatorFunction]] {
 
 // MARK: - Validator Functions
 
-func validateMin(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validateMin(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let numValue = value as? NSNumber,
           let requiredNum = required as? NSNumber else {
         return false
     }
     
     if numValue.doubleValue < requiredNum.doubleValue {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' must be at least \(raw)"
         ))
         return false
@@ -53,15 +53,15 @@ func validateMin(field: String, value: Any, raw: String, required: Any, errors: 
     return true
 }
 
-func validateMax(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validateMax(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let numValue = value as? NSNumber,
           let requiredNum = required as? NSNumber else {
         return false
     }
     
     if numValue.doubleValue > requiredNum.doubleValue {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' cannot be more than \(raw)"
         ))
         return false
@@ -69,15 +69,15 @@ func validateMax(field: String, value: Any, raw: String, required: Any, errors: 
     return true
 }
 
-func validateMinDate(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validateMinDate(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let dateValue = value as? Date,
           let requiredDate = required as? Date else {
         return false
     }
     
     if dateValue < requiredDate {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' must be at least \(raw)"
         ))
         return false
@@ -85,15 +85,15 @@ func validateMinDate(field: String, value: Any, raw: String, required: Any, erro
     return true
 }
 
-func validateMaxDate(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validateMaxDate(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let dateValue = value as? Date,
           let requiredDate = required as? Date else {
         return false
     }
     
     if dateValue > requiredDate {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' cannot be after \(raw)"
         ))
         return false
@@ -101,15 +101,15 @@ func validateMaxDate(field: String, value: Any, raw: String, required: Any, erro
     return true
 }
 
-func validateMinLen(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validateMinLen(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let strValue = value as? String,
           let requiredLen = required as? NSNumber else {
         return false
     }
     
     if strValue.count < requiredLen.intValue {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' must be at least \(raw) characters"
         ))
         return false
@@ -117,15 +117,15 @@ func validateMinLen(field: String, value: Any, raw: String, required: Any, error
     return true
 }
 
-func validateMaxLen(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validateMaxLen(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let strValue = value as? String,
           let requiredLen = required as? NSNumber else {
         return false
     }
     
     if strValue.count > requiredLen.intValue {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' cannot be more than \(raw) characters"
         ))
         return false
@@ -133,23 +133,23 @@ func validateMaxLen(field: String, value: Any, raw: String, required: Any, error
     return true
 }
 
-func validatePattern(field: String, value: Any, raw: String, required: Any, errors: inout [CheckError]) -> Bool {
+func validatePattern(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
     guard let strValue = value as? String else {
         return false
     }
     
     guard let requiredStr = required as? String,
           let regex = createRegex(requiredStr) else {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "Unsupported pattern for '\(field)': \(raw)"
         ))
         return false
     }
     
     if !regex.test(strValue) {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "'\(field)' doesn't match pattern '\(raw)'"
         ))
         return false

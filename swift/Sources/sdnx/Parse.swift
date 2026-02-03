@@ -1,21 +1,16 @@
 import Foundation
 import Collections
 
-// MARK: - Parsing Status
+// MARK: - Parse Result Types
 
-private struct Status {
-    let input: String
-    var i: String.Index
-    
-    init(input: String) {
-        self.input = input
-        self.i = input.startIndex
-    }
+public enum ParseResult {
+    case success(ParseSuccess<OrderedDictionary<String, Any>>)
+    case failure(ParseFailure)
 }
 
-// MARK: - Main Parser
+// MARK: - Internal Error Types
 
-public enum ParseError: Error {
+private enum InternalParseError: Error {
     case unexpectedCharacter(expected: String, found: String)
     case objectNotClosed(start: String.Index)
     case arrayNotClosed(start: String.Index)
@@ -28,7 +23,27 @@ public enum ParseError: Error {
     case invalidTime(String, start: String.Index)
 }
 
-public func parse(_ input: String) throws -> OrderedDictionary<String, Any> {
+private enum ParseException: Error {
+    case earlyExit
+}
+
+// MARK: - Parsing Status
+
+private struct Status {
+    let input: String
+    var i: String.Index
+    var errors: [ParseError]
+    
+    init(input: String) {
+        self.input = input
+        self.i = input.startIndex
+        self.errors = []
+    }
+}
+
+// MARK: - Main Parser
+
+public func parse(_ input: String) -> ParseResult {
     var status = Status(input: input)
     
     trim(&status)
@@ -38,18 +53,43 @@ public func parse(_ input: String) throws -> OrderedDictionary<String, Any> {
             parseComment(&status)
             trim(&status)
         } else if accept("@", &status) {
-            try parseMacro(&status)
+            do {
+                try parseMacro(&status)
+            } catch {
+                if error is ParseException {
+                    break
+                }
+                return .failure(ParseFailure(errors: status.errors))
+            }
             trim(&status)
         } else {
             break
         }
     }
     
-    if accept("{", &status) {
-        return try parseObject(&status)
-    } else {
-        let found = status.i < status.input.endIndex ? String(status.input[status.i]) : "EOF"
-        throw ParseError.unexpectedCharacter(expected: "{", found: found)
+    do {
+        if accept("{", &status) {
+            let data = try parseObject(&status)
+            if status.errors.isEmpty {
+                return .success(ParseSuccess(data: data))
+            } else {
+                return .failure(ParseFailure(errors: status.errors))
+            }
+        } else {
+            let found = status.i < status.input.endIndex ? String(status.input[status.i]) : "EOF"
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: status.i)
+            status.errors.append(ParseError(
+                message: "Expected '{' but found '\(found)'",
+                index: index,
+                length: 1
+            ))
+            throw ParseException.earlyExit
+        }
+    } catch ParseException.earlyExit {
+        return .failure(ParseFailure(errors: status.errors))
+    } catch {
+        return .failure(ParseFailure(errors: status.errors))
     }
 }
 
@@ -72,12 +112,26 @@ private func accept(_ char: String, _ status: inout Status) -> Bool {
 
 private func expect(_ char: String, _ status: inout Status) throws {
     guard status.i < status.input.endIndex else {
-        throw ParseError.unexpectedCharacter(expected: char, found: "EOF")
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: status.i)
+        status.errors.append(ParseError(
+            message: "Expected '\(char)' but found EOF",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     if status.input[status.i] == char.first! {
         status.input.formIndex(after: &status.i)
     } else {
-        throw ParseError.unexpectedCharacter(expected: char, found: String(status.input[status.i]))
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: status.i)
+        status.errors.append(ParseError(
+            message: "Expected '\(char)' but found '\(status.input[status.i])'",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
 }
 
@@ -93,7 +147,14 @@ private func parseObject(_ status: inout Status) throws -> OrderedDictionary<Str
         if accept("}", &status) {
             break
         } else if status.i >= status.input.endIndex || accept("]", &status) {
-            throw ParseError.objectNotClosed(start: start)
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: start)
+            status.errors.append(ParseError(
+                message: "Object not closed",
+                index: index,
+                length: 1
+            ))
+            throw ParseException.earlyExit
         }
         
         try parseField(&result, &status)
@@ -115,7 +176,14 @@ private func parseArray(_ status: inout Status) throws -> [Any] {
         if accept("]", &status) {
             break
         } else if status.i >= status.input.endIndex || accept("}", &status) {
-            throw ParseError.arrayNotClosed(start: start)
+            let startIndex = status.input.startIndex
+            let index = status.input.distance(from: startIndex, to: start)
+            status.errors.append(ParseError(
+                message: "Array not closed",
+                index: index,
+                length: 1
+            ))
+            throw ParseException.earlyExit
         } else if !result.isEmpty {
             try expect(",", &status)
             trim(&status)
@@ -152,7 +220,14 @@ private func parseField(_ result: inout OrderedDictionary<String, Any>, _ status
         }
         name = String(status.input[start..<status.i])
     } else {
-        throw ParseError.invalidFieldName(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        status.errors.append(ParseError(
+            message: "Field must start with quote or alpha",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     
     trim(&status)
@@ -175,7 +250,8 @@ private func parseValue(_ status: inout Status) throws -> Any {
             status.input.formIndex(after: &status.i)
         }
         let value = String(status.input[start..<status.i]).trimmingCharacters(in: .whitespaces)
-        return try convertValue(value, start: start) ?? NSNull()
+        let index = status.input.distance(from: status.input.startIndex, to: start)
+        return convertValue(value, start: index, errors: &status.errors) ?? NSNull()
     }
 }
 
@@ -187,7 +263,14 @@ private func parseString(_ status: inout Status) throws -> String {
         if status.input[status.i] == "\\" {
             status.input.formIndex(after: &status.i)
             if status.i >= status.input.endIndex {
-                throw ParseError.stringNotClosed(start: start)
+                let startIndex = status.input.startIndex
+                let index = status.input.distance(from: startIndex, to: start)
+                status.errors.append(ParseError(
+                    message: "String not closed",
+                    index: index,
+                    length: 1
+                ))
+                throw ParseException.earlyExit
             }
             let nextChar = status.input[status.i]
             if nextChar == "\"" {
@@ -201,7 +284,13 @@ private func parseString(_ status: inout Status) throws -> String {
             } else if nextChar == "r" {
                 result.append("\r")
             } else {
-                throw ParseError.invalidEscapeSequence("\\\(nextChar)")
+                let startIndex = status.input.startIndex
+                let index = status.input.distance(from: startIndex, to: status.input.index(before: status.i))
+                status.errors.append(ParseError(
+                    message: "Invalid escape sequence '\\\(nextChar)'",
+                    index: index,
+                    length: 2
+                ))
             }
             status.input.formIndex(after: &status.i)
         } else if status.input[status.i] == "\"" {
@@ -213,7 +302,14 @@ private func parseString(_ status: inout Status) throws -> String {
     }
     
     if status.i >= status.input.endIndex {
-        throw ParseError.stringNotClosed(start: start)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: start)
+        status.errors.append(ParseError(
+            message: "String not closed",
+            index: index,
+            length: 1
+        ))
+        throw ParseException.earlyExit
     }
     
     status.input.formIndex(after: &status.i)
@@ -263,7 +359,14 @@ private func parseMacro(_ status: inout Status) throws {
         trim(&status)
         try expect(")", &status)
     default:
-        throw ParseError.unknownMacro(macro)
+        let startIndex = status.input.startIndex
+        let index = status.input.distance(from: startIndex, to: status.input.index(status.i, offsetBy: -macro.count))
+        status.errors.append(ParseError(
+            message: "Unknown macro: '\(macro)'",
+            index: index,
+            length: macro.count
+        ))
+        throw ParseException.earlyExit
     }
 }
 

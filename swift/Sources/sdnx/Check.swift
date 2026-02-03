@@ -3,6 +3,15 @@ import Collections
 
 // MARK: - Check Result Types
 
+public struct CheckSuccess {
+    public let ok = true
+}
+
+public struct CheckFailure {
+    public let ok = false
+    public let errors: [CheckError]
+}
+
 public enum CheckResult {
     case success(CheckSuccess)
     case failure(CheckFailure)
@@ -11,77 +20,81 @@ public enum CheckResult {
 // MARK: - Main Check Function
 
 public func check(_ input: OrderedDictionary<String, Any>, schema: Schema) -> CheckResult {
-    var errors: [CheckError] = []
+    var status = CheckStatus(path: [], errors: [])
     
-    _ = checkObjectSchemaInner(input, schema: schema, errors: &errors)
+    _ = checkObjectSchemaInner(input, schema: schema, status: &status)
     
-    if errors.isEmpty {
+    if status.errors.isEmpty {
         return .success(CheckSuccess())
     } else {
-        return .failure(CheckFailure(errors: errors))
+        return .failure(CheckFailure(errors: status.errors))
     }
 }
 
 // MARK: - Check Functions
 
-func checkObjectSchema(_ input: OrderedDictionary<String, Any>, schema: ObjectSchema, errors: inout [CheckError]) -> Bool {
-    return checkObjectSchemaInner(input, schema: schema.inner, errors: &errors)
+func checkObjectSchema(_ input: OrderedDictionary<String, Any>, schema: ObjectSchema, status: inout CheckStatus) -> Bool {
+    return checkObjectSchemaInner(input, schema: schema.inner, status: &status)
 }
 
-func checkObjectSchemaInner(_ input: OrderedDictionary<String, Any>, schema: Schema, errors: inout [CheckError]) -> Bool {
+func checkObjectSchemaInner(_ input: OrderedDictionary<String, Any>, schema: Schema, status: inout CheckStatus) -> Bool {
     var result = true
     for (field, fieldSchema) in schema {
+		status.path.append(field);
         if field.hasPrefix("mix$") {
             if let mixSchema = fieldSchema as? MixSchema {
-                if !checkMixSchema(input, schema: mixSchema, errors: &errors) {
+                if !checkMixSchema(input, schema: mixSchema, status: &status) {
                     result = false
                 }
             }
         } else if field.hasPrefix("any$") {
             if let anySchema = fieldSchema as? AnySchema {
-                if !checkAnySchema(input, schema: anySchema, field: field, errors: &errors) {
+                if !checkAnySchema(input, schema: anySchema, field: field, status: &status) {
                     result = false
                 }
             }
         } else {
             let value = input[field]
-            if !checkFieldSchema(value, schema: fieldSchema, field: field, errors: &errors) {
+            if !checkFieldSchema(value, schema: fieldSchema, field: field, status: &status) {
                 result = false
             }
         }
+        let _ = status.path.popLast()
     }
     return result
 }
 
-func checkArraySchema(_ input: [Any], schema: ArraySchema, errors: inout [CheckError]) -> Bool {
+func checkArraySchema(_ input: [Any], schema: ArraySchema, status: inout CheckStatus) -> Bool {
     var result = true
     for (i, value) in input.enumerated() {
-        if !checkFieldSchema(value, schema: schema.inner, field: String(i), errors: &errors) {
+        status.path.append(String(i))
+        if !checkFieldSchema(value, schema: schema.inner, field: String(i), status: &status) {
             result = false
         }
+        let _ = status.path.popLast()
     }
     return result
 }
 
-func checkUnionSchema(_ value: Any?, schema: UnionSchema, field: String, errors: inout [CheckError]) -> Bool {
-    var fieldErrors: [CheckError] = []
+func checkUnionSchema(_ value: Any?, schema: UnionSchema, field: String, status: inout CheckStatus) -> Bool {
+    var fieldStatus = CheckStatus(path: status.path, errors: [])
     var ok = false
     for fs in schema.inner {
-        if checkFieldSchema(value, schema: fs, field: field, errors: &fieldErrors) {
+        if checkFieldSchema(value, schema: fs, field: field, status: &fieldStatus) {
             ok = true
             break
         }
     }
     if !ok {
-        errors.append(CheckError(
-            path: [],
-            message: fieldErrors.map { $0.message }.joined(separator: " | ")
+        status.errors.append(CheckError(
+            path: status.path,
+            message: fieldStatus.errors.map { $0.message }.joined(separator: " | ")
         ))
     }
     return ok
 }
 
-func checkMixSchema(_ input: OrderedDictionary<String, Any>, schema: MixSchema, errors: inout [CheckError]) -> Bool {
+func checkMixSchema(_ input: OrderedDictionary<String, Any>, schema: MixSchema, status: inout CheckStatus) -> Bool {
     var fieldErrors: [CheckError] = []
     var ok = false
     for fs in schema.inner {
@@ -92,28 +105,28 @@ func checkMixSchema(_ input: OrderedDictionary<String, Any>, schema: MixSchema, 
             break
         case .failure(let failure):
             fieldErrors.append(CheckError(
-                path: [],
+                path: status.path,
                 message: failure.errors.map { $0.message }.joined(separator: " & ")
             ))
         }
     }
     if !ok {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: fieldErrors.map { $0.message }.joined(separator: " | ")
         ))
     }
     return ok
 }
 
-func checkAnySchema(_ input: OrderedDictionary<String, Any>, schema: AnySchema, field: String, errors: inout [CheckError]) -> Bool {
+func checkAnySchema(_ input: OrderedDictionary<String, Any>, schema: AnySchema, field: String, status: inout CheckStatus) -> Bool {
     var result = true
     for (anyField, value) in input {
         // PERF: could cache this
         if let regexp = createRegex(schema.type) {
             if !regexp.test(anyField) {
-                errors.append(CheckError(
-                    path: [],
+                status.errors.append(CheckError(
+                    path: status.path,
                     message: "'\(anyField)' name doesn't match pattern '\(schema.type)'"
                 ))
                 return false
@@ -121,58 +134,58 @@ func checkAnySchema(_ input: OrderedDictionary<String, Any>, schema: AnySchema, 
         }
         
         // Run the field's validators
-        if !checkFieldSchema(value, schema: schema.inner, field: anyField, errors: &errors) {
+        if !checkFieldSchema(value, schema: schema.inner, field: anyField, status: &status) {
             result = false
         }
     }
     return result
 }
 
-func checkFieldSchema(_ value: Any?, schema: SchemaValue, field: String, errors: inout [CheckError]) -> Bool {
+func checkFieldSchema(_ value: Any?, schema: SchemaValue, field: String, status: inout CheckStatus) -> Bool {
     switch schema.type {
     case "object":
         if let objSchema = schema as? ObjectSchema {
             guard let dictValue = value as? OrderedDictionary<String, Any> else {
-                errors.append(CheckError(
-                    path: [],
+                status.errors.append(CheckError(
+                    path: status.path,
                     message: "'\(field)' must be an object"
                 ))
                 return false
             }
-            return checkObjectSchema(dictValue, schema: objSchema, errors: &errors)
+            return checkObjectSchema(dictValue, schema: objSchema, status: &status)
         }
         return false
         
     case "array":
         if let arrSchema = schema as? ArraySchema {
             guard let arrayValue = value as? [Any] else {
-                errors.append(CheckError(
-                    path: [],
+                status.errors.append(CheckError(
+                    path: status.path,
                     message: "'\(field)' must be an array"
                 ))
                 return false
             }
-            return checkArraySchema(arrayValue, schema: arrSchema, errors: &errors)
+            return checkArraySchema(arrayValue, schema: arrSchema, status: &status)
         }
         return false
         
     case "union":
         if let unionSchema = schema as? UnionSchema {
-            return checkUnionSchema(value, schema: unionSchema, field: field, errors: &errors)
+            return checkUnionSchema(value, schema: unionSchema, field: field, status: &status)
         }
         return false
         
     default:
-        return checkFieldSchemaValue(value, schema: schema, field: field, errors: &errors)
+        return checkFieldSchemaValue(value, schema: schema, field: field, status: &status)
     }
 }
 
-func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, errors: inout [CheckError]) -> Bool {
+func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, status: inout CheckStatus) -> Bool {
     // Check if value is undefined (nil in Swift)
     // Allow "undef" and "null" types to have nil values
     if value == nil && schema.type != "undef" && schema.type != "null" {
-        errors.append(CheckError(
-            path: [],
+        status.errors.append(CheckError(
+            path: status.path,
             message: "Field not found: \(field)"
         ))
         return false
@@ -182,8 +195,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
     switch schema.type {
     case "undef":
         if value != nil {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be undefined"
             ))
             return false
@@ -193,8 +206,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         if value != nil {
             // HACK: Can't figure out how to wrangle Swift nils
             guard value is String, value as? String == "null" else { 
-                errors.append(CheckError(
-                    path: [],
+                status.errors.append(CheckError(
+                    path: status.path,
                     message: "'\(field)' must be null"
                 ))
                 return false
@@ -203,8 +216,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         
     case "bool":
         guard value is Bool else {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be a boolean value"
             ))
             return false
@@ -212,8 +225,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         
     case "int":
         guard let numValue = value as? NSNumber, numValue.isInt else {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be an integer value"
             ))
             return false
@@ -221,8 +234,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         
     case "num":
         guard let _ = value as? NSNumber else {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be a number value"
             ))
             return false
@@ -230,8 +243,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         
     case "date":
         guard value is Date else {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be a date value"
             ))
             return false
@@ -239,8 +252,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         
     case "string":
         guard let _ = value as? String else {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be a string value"
             ))
             return false
@@ -267,8 +280,8 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
         }
         
         if !matches {
-            errors.append(CheckError(
-                path: [],
+            status.errors.append(CheckError(
+                path: status.path,
                 message: "'\(field)' must be '\(expectedType)'"
             ))
             return false
@@ -286,13 +299,13 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, er
             }
             
             if let validate = getValidators()[schema.type]?[method] {
-                if !validate(field, value ?? NSNull(), validator.raw, validator.required ?? NSNull(), &errors) {
+                if !validate(field, value ?? NSNull(), validator.raw, validator.required ?? NSNull(), &status) {
                     return false
                 }
             } else {
                 // This should never happen...
-                errors.append(CheckError(
-                    path: [],
+                status.errors.append(CheckError(
+                    path: status.path,
                     message: "Unsupported validation method for '\(field)': \(method)"
                 ))
                 return false
