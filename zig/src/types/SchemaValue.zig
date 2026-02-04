@@ -6,7 +6,9 @@ const ObjectSchema = @import("./ObjectSchema.zig").ObjectSchema;
 const ArraySchema = @import("./ArraySchema.zig").ArraySchema;
 const UnionSchema = @import("./UnionSchema.zig").UnionSchema;
 const MixSchema = @import("./MixSchema.zig").MixSchema;
-const AnySchema = @import("./AnySchema.zig").AnySchema;
+const PropsSchema = @import("./PropsSchema.zig").PropsSchema;
+const DefSchema = @import("./DefSchema.zig").DefSchema;
+const RefSchema = @import("./RefSchema.zig").RefSchema;
 
 /// Schema value types
 pub const SchemaValue = union(enum) {
@@ -15,7 +17,9 @@ pub const SchemaValue = union(enum) {
     array: ArraySchema,
     union_type: UnionSchema,
     mix: MixSchema,
-    any: AnySchema,
+    props: PropsSchema,
+    def: DefSchema,
+    ref: RefSchema,
 
     pub fn deinit(self: *SchemaValue, allocator: Allocator) void {
         switch (self.*) {
@@ -66,10 +70,17 @@ pub const SchemaValue = union(enum) {
                 }
                 m.inner.deinit(allocator);
             },
-            .any => |*a| {
-                allocator.free(a.type);
-                a.inner.deinit(allocator);
-                allocator.destroy(a.inner);
+            .props => |*p| {
+                allocator.free(p.type);
+                p.inner.deinit(allocator);
+                allocator.destroy(p.inner);
+            },
+            .def => |*d| {
+                d.deinit(allocator);
+            },
+            .ref => |*r| {
+                allocator.free(r.type);
+                allocator.free(r.inner);
             },
         }
     }

@@ -465,7 +465,7 @@ test "parse schema: props macro" {
         try std.testing.expect(active_entry.? == .field);
         const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
-        try std.testing.expect(any_entry.? == .any);
+        try std.testing.expect(any_entry.? == .props);
     }
 
     // Test spaced input
@@ -484,7 +484,7 @@ test "parse schema: props macro" {
         try std.testing.expect(active_entry.? == .field);
         const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
-        try std.testing.expect(any_entry.? == .any);
+        try std.testing.expect(any_entry.? == .props);
     }
 
     // Test unspaced input
@@ -505,7 +505,7 @@ test "parse schema: props macro" {
         try std.testing.expect(active_entry.? == .field);
         const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
-        try std.testing.expect(any_entry.? == .any);
+        try std.testing.expect(any_entry.? == .props);
     }
 }
 
@@ -526,8 +526,8 @@ test "parse schema: props macro with pattern" {
         try std.testing.expect(result.schema.?.count() == 1);
         const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
-        try std.testing.expect(any_entry.? == .any);
-        try std.testing.expect(std.mem.eql(u8, any_entry.?.any.type, "/v\\d/"));
+        try std.testing.expect(any_entry.? == .props);
+        try std.testing.expect(std.mem.eql(u8, any_entry.?.props.type, "/v\\d/"));
     }
 
     // Test spaced input
@@ -540,8 +540,8 @@ test "parse schema: props macro with pattern" {
         try std.testing.expect(result.schema.?.count() == 1);
         const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
-        try std.testing.expect(any_entry.? == .any);
-        try std.testing.expect(std.mem.eql(u8, any_entry.?.any.type, "/v\\d/"));
+        try std.testing.expect(any_entry.? == .props);
+        try std.testing.expect(std.mem.eql(u8, any_entry.?.props.type, "/v\\d/"));
     }
 
     // Test unspaced input
@@ -554,8 +554,147 @@ test "parse schema: props macro with pattern" {
         try std.testing.expect(result.schema.?.count() == 1);
         const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
-        try std.testing.expect(any_entry.? == .any);
-        try std.testing.expect(std.mem.eql(u8, any_entry.?.any.type, "/v\\d/"));
+        try std.testing.expect(any_entry.? == .props);
+        try std.testing.expect(std.mem.eql(u8, any_entry.?.props.type, "/v\\d/"));
+    }
+}
+
+test "parse schema: def macro" {
+    const allocator = std.testing.allocator;
+
+    const input =
+        \\{
+        \\  @def(child): {
+        \\    name: string,
+        \\    age: int,
+        \\  },
+        \\  name: string minlen(2),
+        \\  @mix(child),
+        \\  active: bool,
+        \\}
+    ;
+
+    // Test original input
+    {
+        var result = parseSchema.parseSchema(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.schema.?.count() == 4);
+
+        const def_entry = result.schema.?.get("def$1");
+        try std.testing.expect(def_entry != null);
+        try std.testing.expect(def_entry.? == .def);
+        try std.testing.expect(std.mem.eql(u8, def_entry.?.def.type, "def"));
+        try std.testing.expect(std.mem.eql(u8, def_entry.?.def.name, "child"));
+
+        const name_entry = result.schema.?.get("name");
+        try std.testing.expect(name_entry != null);
+        try std.testing.expect(name_entry.? == .field);
+        try std.testing.expect(std.mem.eql(u8, name_entry.?.field.type, "string"));
+        try std.testing.expect(name_entry.?.field.validators != null);
+
+        const mix_entry = result.schema.?.get("mix$1");
+        try std.testing.expect(mix_entry != null);
+        try std.testing.expect(mix_entry.? == .mix);
+        try std.testing.expect(std.mem.eql(u8, mix_entry.?.mix.type, "mix"));
+        try std.testing.expect(mix_entry.?.mix.inner.items.len == 1);
+
+        const active_entry = result.schema.?.get("active");
+        try std.testing.expect(active_entry != null);
+        try std.testing.expect(active_entry.? == .field);
+        try std.testing.expect(std.mem.eql(u8, active_entry.?.field.type, "bool"));
+
+        const inner_schema = mix_entry.?.mix.inner.items[0];
+        try std.testing.expect(inner_schema.count() == 1);
+        const ref_entry = inner_schema.get("ref$1");
+        try std.testing.expect(ref_entry != null);
+        try std.testing.expect(ref_entry.? == .ref);
+        try std.testing.expect(std.mem.eql(u8, ref_entry.?.ref.type, "ref"));
+        try std.testing.expect(std.mem.eql(u8, ref_entry.?.ref.inner, "child"));
+    }
+
+    // Test spaced input
+    const spaced_input = try spaceUnspace.space(allocator, input);
+    defer allocator.free(spaced_input);
+    {
+        var result = parseSchema.parseSchema(allocator, spaced_input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.schema.?.count() == 4);
+
+        const def_entry = result.schema.?.get("def$1");
+        try std.testing.expect(def_entry != null);
+        try std.testing.expect(def_entry.? == .def);
+        try std.testing.expect(std.mem.eql(u8, def_entry.?.def.type, "def"));
+        try std.testing.expect(std.mem.eql(u8, def_entry.?.def.name, "child"));
+
+        const name_entry = result.schema.?.get("name");
+        try std.testing.expect(name_entry != null);
+        try std.testing.expect(name_entry.? == .field);
+        try std.testing.expect(std.mem.eql(u8, name_entry.?.field.type, "string"));
+        try std.testing.expect(name_entry.?.field.validators != null);
+
+        const mix_entry = result.schema.?.get("mix$1");
+        try std.testing.expect(mix_entry != null);
+        try std.testing.expect(mix_entry.? == .mix);
+        try std.testing.expect(std.mem.eql(u8, mix_entry.?.mix.type, "mix"));
+        try std.testing.expect(mix_entry.?.mix.inner.items.len == 1);
+
+        const active_entry = result.schema.?.get("active");
+        try std.testing.expect(active_entry != null);
+        try std.testing.expect(active_entry.? == .field);
+        try std.testing.expect(std.mem.eql(u8, active_entry.?.field.type, "bool"));
+
+        const inner_schema = mix_entry.?.mix.inner.items[0];
+        try std.testing.expect(inner_schema.count() == 1);
+        const ref_entry = inner_schema.get("ref$1");
+        try std.testing.expect(ref_entry != null);
+        try std.testing.expect(ref_entry.? == .ref);
+        try std.testing.expect(std.mem.eql(u8, ref_entry.?.ref.type, "ref"));
+        try std.testing.expect(std.mem.eql(u8, ref_entry.?.ref.inner, "child"));
+    }
+
+    // Test unspaced input
+    const unspaced_input = try spaceUnspace.unspace(allocator, input);
+    defer allocator.free(unspaced_input);
+    const fixed_unspaced = try spaceUnspace.applyUnspaceReplacements(allocator, unspaced_input);
+    defer allocator.free(fixed_unspaced);
+    {
+        var result = parseSchema.parseSchema(allocator, fixed_unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.schema.?.count() == 4);
+
+        const def_entry = result.schema.?.get("def$1");
+        try std.testing.expect(def_entry != null);
+        try std.testing.expect(def_entry.? == .def);
+        try std.testing.expect(std.mem.eql(u8, def_entry.?.def.type, "def"));
+        try std.testing.expect(std.mem.eql(u8, def_entry.?.def.name, "child"));
+
+        const name_entry = result.schema.?.get("name");
+        try std.testing.expect(name_entry != null);
+        try std.testing.expect(name_entry.? == .field);
+        try std.testing.expect(std.mem.eql(u8, name_entry.?.field.type, "string"));
+        try std.testing.expect(name_entry.?.field.validators != null);
+
+        const mix_entry = result.schema.?.get("mix$1");
+        try std.testing.expect(mix_entry != null);
+        try std.testing.expect(mix_entry.? == .mix);
+        try std.testing.expect(std.mem.eql(u8, mix_entry.?.mix.type, "mix"));
+        try std.testing.expect(mix_entry.?.mix.inner.items.len == 1);
+
+        const active_entry = result.schema.?.get("active");
+        try std.testing.expect(active_entry != null);
+        try std.testing.expect(active_entry.? == .field);
+        try std.testing.expect(std.mem.eql(u8, active_entry.?.field.type, "bool"));
+
+        const inner_schema = mix_entry.?.mix.inner.items[0];
+        try std.testing.expect(inner_schema.count() == 1);
+        const ref_entry = inner_schema.get("ref$1");
+        try std.testing.expect(ref_entry != null);
+        try std.testing.expect(ref_entry.? == .ref);
+        try std.testing.expect(std.mem.eql(u8, ref_entry.?.ref.type, "ref"));
+        try std.testing.expect(std.mem.eql(u8, ref_entry.?.ref.inner, "child"));
     }
 }
 

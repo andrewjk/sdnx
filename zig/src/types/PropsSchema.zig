@@ -1,7 +1,7 @@
 const SchemaValue = @import("./SchemaValue.zig").SchemaValue;
 
-/// Any schema represents a custom type with pattern matching
-pub const AnySchema = struct {
+/// Props schema represents a property pattern schema
+pub const PropsSchema = struct {
     type: []const u8,
     inner: *SchemaValue,
 };

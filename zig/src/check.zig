@@ -9,7 +9,9 @@ const ArraySchema = @import("./types/ArraySchema.zig").ArraySchema;
 const FieldSchema = @import("./types/FieldSchema.zig").FieldSchema;
 const UnionSchema = @import("./types/UnionSchema.zig").UnionSchema;
 const MixSchema = @import("./types/MixSchema.zig").MixSchema;
-const AnySchema = @import("./types/AnySchema.zig").AnySchema;
+const PropsSchema = @import("./types/PropsSchema.zig").PropsSchema;
+const DefSchema = @import("./types/DefSchema.zig").DefSchema;
+const RefSchema = @import("./types/RefSchema.zig").RefSchema;
 const Validator = @import("./types/Validator.zig").Validator;
 const Value = @import("./types/Value.zig").Value;
 
@@ -72,7 +74,7 @@ pub fn check(allocator: Allocator, input: *const Value, schema: *const Schema) C
         errors.deinit(allocator);
     }
 
-    _ = try checkObjectSchemaInner(allocator, input, schema, &errors);
+    _ = try checkObjectSchemaInner(allocator, input, schema, &errors, schema);
 
     if (errors.items.len == 0) {
         return CheckResult{ .ok = {} };
@@ -86,6 +88,7 @@ fn checkObjectSchemaInner(
     input: *const Value,
     schema: *const Schema,
     errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
 ) CheckError!bool {
     switch (input.*) {
         .object => |obj| {
@@ -96,16 +99,24 @@ fn checkObjectSchemaInner(
                 const field_schema = entry.value_ptr.*;
 
                 if (std.mem.startsWith(u8, field, "mix$")) {
-                    if (!try checkMixSchema(allocator, input, field_schema.mix, errors)) {
+                    if (!try checkMixSchema(allocator, input, field_schema.mix, errors, full_schema)) {
                         result = false;
                     }
                 } else if (std.mem.startsWith(u8, field, "props$")) {
-                    if (!try checkAnySchema(allocator, &obj, field_schema.any, field, errors)) {
+                    if (!try checkPropsSchema(allocator, &obj, field_schema.props, field, errors, full_schema)) {
                         result = false;
                     }
+                } else if (std.mem.startsWith(u8, field, "ref$")) {
+                    if (field_schema == .ref) {
+                        if (!try checkRefSchema(allocator, input, field_schema.ref, errors, full_schema)) {
+                            result = false;
+                        }
+                    }
+                } else if (std.mem.startsWith(u8, field, "def$")) {
+                    continue;
                 } else {
                     const value = obj.get(field);
-                    if (!try checkFieldSchema(allocator, if (value) |v| &v else null, field_schema, field, errors)) {
+                    if (!try checkFieldSchema(allocator, if (value) |v| &v else null, field_schema, field, errors, full_schema)) {
                         result = false;
                     }
                 }
@@ -118,7 +129,6 @@ fn checkObjectSchemaInner(
             try errors.append(allocator, err);
         },
     }
-    // TODO: Remove this
     return false;
 }
 
@@ -127,6 +137,7 @@ fn checkArraySchema(
     input: *const Value,
     schema: ArraySchema,
     errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
 ) CheckError!bool {
     switch (input.*) {
         .array => |arr| {
@@ -134,7 +145,7 @@ fn checkArraySchema(
             for (arr.items, 0..) |item, i| {
                 const field = try std.fmt.allocPrint(allocator, "{d}", .{i});
                 defer allocator.free(field);
-                if (!try checkFieldSchema(allocator, &item, schema.inner.*, field, errors)) {
+                if (!try checkFieldSchema(allocator, &item, schema.inner.*, field, errors, full_schema)) {
                     result = false;
                 }
             }
@@ -155,6 +166,7 @@ fn checkUnionSchema(
     schema: UnionSchema,
     field: []const u8,
     errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
 ) CheckError!bool {
     var field_errors: std.ArrayList(ValidationError) = .empty;
     defer {
@@ -166,7 +178,7 @@ fn checkUnionSchema(
 
     var ok = false;
     for (schema.inner.items) |fs| {
-        if (try checkFieldSchema(allocator, value, fs, field, &field_errors)) {
+        if (try checkFieldSchema(allocator, value, fs, field, &field_errors, full_schema)) {
             ok = true;
             break;
         }
@@ -194,6 +206,7 @@ fn checkMixSchema(
     input: *const Value,
     schema: MixSchema,
     errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
 ) CheckError!bool {
     var field_errors: std.ArrayList(ValidationError) = .empty;
     defer {
@@ -204,18 +217,25 @@ fn checkMixSchema(
     }
 
     var ok = false;
-    for (schema.inner.items) |fs| {
-        var mix_result = try check(allocator, input, &fs);
-        defer mix_result.deinit(allocator);
+    for (schema.inner.items) |alt_schema| {
+        var mix_errors: std.ArrayList(ValidationError) = .empty;
+        defer {
+            for (mix_errors.items) |*err| {
+                err.deinit();
+            }
+            mix_errors.deinit(allocator);
+        }
 
-        if (mix_result == .ok) {
+        const result = try checkObjectSchemaInner(allocator, input, &alt_schema, &mix_errors, full_schema);
+
+        if (result) {
             ok = true;
             break;
         } else {
             var err = ValidationError.init(allocator);
             var msg_list: std.ArrayList([]const u8) = .empty;
 
-            for (mix_result.err_list.items) |e| {
+            for (mix_errors.items) |e| {
                 try msg_list.append(allocator, e.message);
             }
 
@@ -243,12 +263,13 @@ fn checkMixSchema(
     return ok;
 }
 
-fn checkAnySchema(
+fn checkPropsSchema(
     allocator: Allocator,
     input: *const std.StringArrayHashMap(Value),
-    schema: AnySchema,
+    schema: PropsSchema,
     field: []const u8,
     errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
 ) CheckError!bool {
     _ = field;
     var result = true;
@@ -266,7 +287,7 @@ fn checkAnySchema(
             }
         }
 
-        if (!try checkFieldSchema(allocator, value, schema.inner.*, any_field, errors)) {
+        if (!try checkFieldSchema(allocator, value, schema.inner.*, any_field, errors, full_schema)) {
             result = false;
         }
     }
@@ -279,6 +300,7 @@ fn checkFieldSchema(
     schema: SchemaValue,
     field: []const u8,
     errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
 ) CheckError!bool {
     switch (schema) {
         .object => |obj_schema| {
@@ -289,7 +311,7 @@ fn checkFieldSchema(
                 return false;
             }
             _ = &value_opt.?.object;
-            return try checkObjectSchemaInner(allocator, value_opt.?, &obj_schema.inner, errors);
+            return try checkObjectSchemaInner(allocator, value_opt.?, &obj_schema.inner, errors, full_schema);
         },
         .array => |arr_schema| {
             if (value_opt == null or value_opt.?.* != .array) {
@@ -298,7 +320,7 @@ fn checkFieldSchema(
                 try errors.append(allocator, err);
                 return false;
             }
-            return try checkArraySchema(allocator, value_opt.?, arr_schema, errors);
+            return try checkArraySchema(allocator, value_opt.?, arr_schema, errors, full_schema);
         },
         .union_type => |union_schema| {
             if (value_opt == null) {
@@ -312,7 +334,7 @@ fn checkFieldSchema(
                 try errors.append(allocator, err);
                 return false;
             }
-            return try checkUnionSchema(allocator, value_opt.?, union_schema, field, errors);
+            return try checkUnionSchema(allocator, value_opt.?, union_schema, field, errors, full_schema);
         },
         .field => |field_schema| {
             return try checkFieldSchemaValue(allocator, value_opt, field_schema, field, errors);
@@ -324,9 +346,9 @@ fn checkFieldSchema(
                 try errors.append(allocator, err);
                 return false;
             };
-            return try checkMixSchema(allocator, value, schema.mix, errors);
+            return try checkMixSchema(allocator, value, schema.mix, errors, full_schema);
         },
-        .any => {
+        .props => {
             if (value_opt == null) {
                 var err = ValidationError.init(allocator);
                 err.message = try std.fmt.allocPrint(allocator, "Field not found: {s}", .{field});
@@ -339,9 +361,37 @@ fn checkFieldSchema(
                 try errors.append(allocator, err);
                 return false;
             };
-            return try checkAnySchema(allocator, obj_val, schema.any, field, errors);
+            return try checkPropsSchema(allocator, obj_val, schema.props, field, errors, full_schema);
+        },
+        .def => {
+            return true;
+        },
+        .ref => {
+            return true;
         },
     }
+}
+
+fn checkRefSchema(
+    allocator: Allocator,
+    input: *const Value,
+    ref_schema: RefSchema,
+    errors: *std.ArrayList(ValidationError),
+    full_schema: *const Schema,
+) CheckError!bool {
+    const ref_name = ref_schema.inner;
+    var iter = full_schema.iterator();
+    while (iter.next()) |entry| {
+        if (std.mem.startsWith(u8, entry.key_ptr.*, "def$")) {
+            if (entry.value_ptr.* == .def and std.mem.eql(u8, entry.value_ptr.*.def.name, ref_name)) {
+                return try checkObjectSchemaInner(allocator, input, &entry.value_ptr.*.def.inner, errors, full_schema);
+            }
+        }
+    }
+    var err = ValidationError.init(allocator);
+    err.message = try std.fmt.allocPrint(allocator, "Unknown reference: {s}", .{ref_name});
+    try errors.append(allocator, err);
+    return false;
 }
 
 fn checkFieldSchemaValue(

@@ -1224,6 +1224,68 @@ test "check: @props no pattern invalid type" {
     try std.testing.expect(result == .err_list);
 }
 
+test "check: @def in @mix valid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ @def(admin): { role: \"admin\", level: int }, @mix(admin) }";
+    const data_input = "{ role: \"admin\", level: 5 }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .ok);
+}
+
+test "check: @def in @mix invalid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ @def(admin): { role: \"admin\", level: int }, @mix(admin) }";
+    const data_input = "{ role: \"user\", level: 5 }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .err_list);
+    try std.testing.expect(result.err_list.items.len == 1);
+    try std.testing.expect(std.mem.indexOf(u8, result.err_list.items[0].message, "'role' must be 'admin'") != null);
+}
+
+test "check: recursive @def" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ @def(node): { type: string, children: [{ @mix(node) }] }, @mix(node) }";
+    const data_input = "{ type: \"root\", children: [{ type: \"p\", children: [{ type: \"h1\", children: [] }, { type: \"text\", children: [] }] }] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .ok);
+}
+
 test "check: @props with pattern valid" {
     const allocator = std.testing.allocator;
 

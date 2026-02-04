@@ -8,7 +8,9 @@ const ArraySchema = @import("./types/ArraySchema.zig").ArraySchema;
 const FieldSchema = @import("./types/FieldSchema.zig").FieldSchema;
 const UnionSchema = @import("./types/UnionSchema.zig").UnionSchema;
 const MixSchema = @import("./types/MixSchema.zig").MixSchema;
-const AnySchema = @import("./types/AnySchema.zig").AnySchema;
+const PropsSchema = @import("./types/PropsSchema.zig").PropsSchema;
+const DefSchema = @import("./types/DefSchema.zig").DefSchema;
+const RefSchema = @import("./types/RefSchema.zig").RefSchema;
 const Validator = @import("./types/Validator.zig").Validator;
 const convertValue = @import("./convertValue.zig").convertValue;
 const isTruthy = @import("./convertValue.zig").isTruthy;
@@ -47,16 +49,23 @@ pub const Status = struct {
     input: []const u8,
     i: usize,
     description: []const u8 = "",
+    def_counter: usize,
     mix_counter: usize,
     any_counter: usize,
     errors: std.ArrayListUnmanaged(SchemaParseErrorInfo),
     allocator: Allocator,
+    refs: std.StringArrayHashMap(void),
 
     pub fn deinit(self: *Status) void {
         for (self.errors.items) |*err| {
             err.deinit(self.allocator);
         }
         self.errors.deinit(self.allocator);
+        var iter = self.refs.iterator();
+        while (iter.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+        }
+        self.refs.deinit();
     }
 };
 
@@ -120,10 +129,12 @@ pub fn parseSchema(allocator: Allocator, input: []const u8) SchemaParseResult {
         .input = input,
         .i = 0,
         .description = "",
+        .def_counter = 1,
         .mix_counter = 1,
         .any_counter = 1,
         .errors = .empty,
         .allocator = allocator,
+        .refs = std.StringArrayHashMap(void).init(allocator),
     };
     defer status.deinit();
 
@@ -264,9 +275,72 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
         trim(status);
         expect('(', status);
 
-        if (std.mem.eql(u8, macro, "mix")) {
+        if (std.mem.eql(u8, macro, "def")) {
+            trim(status);
+            const ref_start = status.i;
+            while (status.i < status.input.len and status.input[status.i] != ')') {
+                status.i += 1;
+            }
+            const ref_name = std.mem.trim(u8, status.input[ref_start..status.i], &std.ascii.whitespace);
+            if (std.mem.indexOfAny(u8, ref_name, &std.ascii.whitespace) != null) {
+                addError(status, "Invalid reference name", ref_start, ref_name.len);
+            }
+            expect(')', status);
+            trim(status);
+            expect(':', status);
             trim(status);
             expect('{', status);
+
+            const name_dup = allocator.dupe(u8, ref_name) catch {
+                return;
+            };
+
+            const ref_key = allocator.dupe(u8, ref_name) catch {
+                allocator.free(name_dup);
+                return;
+            };
+
+            _ = status.refs.put(ref_key, {}) catch {
+                allocator.free(ref_key);
+                allocator.free(name_dup);
+                return;
+            };
+
+            var inner_schema = parseObject(allocator, status) catch {
+                allocator.free(ref_key);
+                allocator.free(name_dup);
+                return;
+            };
+
+            const type_dup = allocator.dupe(u8, "def") catch {
+                var iter = inner_schema.iterator();
+                while (iter.next()) |entry| {
+                    allocator.free(entry.key_ptr.*);
+                    entry.value_ptr.deinit(allocator);
+                }
+                inner_schema.deinit();
+                allocator.free(ref_key);
+                allocator.free(name_dup);
+                return;
+            };
+
+            var def_schema = DefSchema{
+                .type = type_dup,
+                .name = name_dup,
+                .inner = inner_schema,
+            };
+
+            const key = std.fmt.allocPrint(allocator, "def${d}", .{status.def_counter}) catch {
+                def_schema.deinit(allocator);
+                return;
+            };
+            status.def_counter += 1;
+            result.put(key, .{ .def = def_schema }) catch {
+                allocator.free(key);
+                def_schema.deinit(allocator);
+            };
+        } else if (std.mem.eql(u8, macro, "mix")) {
+            trim(status);
             var inner_list: std.ArrayList(Schema) = .empty;
             errdefer {
                 for (inner_list.items) |*item| {
@@ -286,22 +360,55 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
                 .inner = inner_list,
             };
 
-            const inner_schema = parseObject(allocator, status) catch {
-                allocator.free(mix_result.type);
-                return;
-            };
-            mix_result.inner.append(allocator, inner_schema) catch {
-                allocator.free(mix_result.type);
-                return;
-            };
-
-            trim(status);
-            while (accept('|', status)) {
+            while (true) {
                 trim(status);
-                expect('{', status);
-                const alt_schema = parseObject(allocator, status) catch continue;
-                mix_result.inner.append(allocator, alt_schema) catch continue;
+                const ref_start = status.i;
+                if (accept('{', status)) {
+                    const alt_schema = parseObject(allocator, status) catch break;
+                    mix_result.inner.append(allocator, alt_schema) catch break;
+                } else {
+                    while (status.i < status.input.len and !std.ascii.isWhitespace(status.input[status.i]) and status.input[status.i] != '|' and status.input[status.i] != ')') {
+                        status.i += 1;
+                    }
+                    const ref = std.mem.trim(u8, status.input[ref_start..status.i], &std.ascii.whitespace);
+                    if (status.refs.get(ref) == null) {
+                        addError(status, "Unknown reference", ref_start, ref.len);
+                    } else {
+                        var ref_schema = Schema.init(allocator);
+                        const ref_type_dup = allocator.dupe(u8, "ref") catch break;
+                        const ref_name_dup = allocator.dupe(u8, ref) catch {
+                            allocator.free(ref_type_dup);
+                            break;
+                        };
+                        const ref_val = RefSchema{
+                            .type = ref_type_dup,
+                            .inner = ref_name_dup,
+                        };
+                        const key = std.fmt.allocPrint(allocator, "ref$1", .{}) catch {
+                            allocator.free(ref_type_dup);
+                            allocator.free(ref_name_dup);
+                            break;
+                        };
+                        ref_schema.put(key, .{ .ref = ref_val }) catch {
+                            allocator.free(key);
+                            allocator.free(ref_type_dup);
+                            allocator.free(ref_name_dup);
+                            break;
+                        };
+                        mix_result.inner.append(allocator, ref_schema) catch {
+                            var iter = ref_schema.iterator();
+                            while (iter.next()) |entry| {
+                                allocator.free(entry.key_ptr.*);
+                                entry.value_ptr.deinit(allocator);
+                            }
+                            ref_schema.deinit();
+                        };
+                    }
+                }
                 trim(status);
+                if (!accept('|', status)) {
+                    break;
+                }
             }
 
             expect(')', status);
@@ -345,7 +452,7 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
             const pattern_dup = allocator.dupe(u8, pattern) catch return;
 
             result.put(key, .{
-                .any = AnySchema{
+                .props = PropsSchema{
                     .type = pattern_dup,
                     .inner = inner,
                 },
@@ -497,7 +604,7 @@ fn parseType(allocator: Allocator, status: *Status) anyerror!SchemaValue {
     }
     const type_str = std.mem.trim(u8, status.input[start..status.i], &std.ascii.whitespace);
 
-    if (!isBasicType(type_str)) {
+    if (!isBasicType(type_str) and status.refs.get(type_str) == null) {
         _ = convertValue(allocator, type_str) catch {
             addError(status, "Invalid type name", start, type_str.len);
             return error.ParseError;
