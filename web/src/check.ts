@@ -1,10 +1,12 @@
-import AnySchema from "./types/AnySchema";
 import ArraySchema from "./types/ArraySchema";
 import CheckError from "./types/CheckError";
 import CheckStatus from "./types/CheckStatus";
+import DefSchema from "./types/DefSchema";
 import FieldSchema from "./types/FieldSchema";
 import MixSchema from "./types/MixSchema";
 import ObjectSchema from "./types/ObjectSchema";
+import PropsSchema from "./types/PropsSchema";
+import RefSchema from "./types/RefSchema";
 import Schema from "./types/Schema";
 import SchemaValue from "./types/SchemaValue";
 import UnionSchema from "./types/UnionSchema";
@@ -27,6 +29,7 @@ export default function check(
 	let status: CheckStatus = {
 		path: [],
 		errors: [],
+		defs: {},
 	};
 
 	checkObjectSchemaInner(input, schema, status);
@@ -54,12 +57,19 @@ function checkObjectSchemaInner(
 	let result = true;
 	for (let [field, fieldSchema] of Object.entries(schema)) {
 		status.path.push(field);
-		if (field.startsWith("mix$")) {
+		if (field.startsWith("def$")) {
+			// Add it to the status for use when it's referenced
+			status.defs[(fieldSchema as DefSchema).name] = (fieldSchema as DefSchema).inner;
+		} else if (field.startsWith("ref$")) {
+			if (!checkRefSchema(input, fieldSchema as RefSchema, status)) {
+				result = false;
+			}
+		} else if (field.startsWith("mix$")) {
 			if (!checkMixSchema(input, fieldSchema as MixSchema, status)) {
 				result = false;
 			}
 		} else if (field.startsWith("props$")) {
-			if (!checkAnySchema(input, fieldSchema as AnySchema, field, status)) {
+			if (!checkPropsSchema(input, fieldSchema as PropsSchema, field, status)) {
 				result = false;
 			}
 		} else {
@@ -93,6 +103,7 @@ function checkUnionSchema(value: unknown, schema: UnionSchema, field: string, st
 	let fieldStatus: CheckStatus = {
 		path: [...status.path],
 		errors: [],
+		defs: status.defs,
 	};
 	let ok = false;
 	for (let fs of schema.inner) {
@@ -110,11 +121,26 @@ function checkUnionSchema(value: unknown, schema: UnionSchema, field: string, st
 	return ok;
 }
 
+function checkRefSchema(input: Record<PropertyKey, unknown>, ref: RefSchema, status: CheckStatus) {
+	let def = status.defs[ref.inner];
+	if (def === undefined) {
+		// This should never happen...
+		status.errors.push({
+			path: [...status.path],
+			message: `Undefined def: ${ref}`,
+		});
+		return false;
+	}
+
+	return checkObjectSchemaInner(input, def, status);
+}
+
 function checkMixSchema(
 	input: Record<PropertyKey, unknown>,
 	schema: MixSchema,
 	status: CheckStatus,
 ) {
+	/*
 	let fieldErrors: CheckError[] = [];
 	let ok = false;
 	for (let fs of schema.inner) {
@@ -136,11 +162,37 @@ function checkMixSchema(
 		});
 	}
 	return ok;
+	*/
+	let fieldErrors: CheckError[] = [];
+	let ok = false;
+	for (let fs of schema.inner) {
+		let fieldStatus: CheckStatus = {
+			path: [...status.path],
+			errors: [],
+			defs: status.defs,
+		};
+		if (checkObjectSchemaInner(input, fs, fieldStatus)) {
+			ok = true;
+			break;
+		} else {
+			fieldErrors.push({
+				path: [...status.path],
+				message: fieldStatus.errors.map((e) => e.message).join(" & "),
+			});
+		}
+	}
+	if (!ok) {
+		status.errors.push({
+			path: [...status.path],
+			message: fieldErrors.map((e) => e.message).join(" | "),
+		});
+	}
+	return ok;
 }
 
-function checkAnySchema(
+function checkPropsSchema(
 	input: Record<PropertyKey, unknown>,
-	schema: AnySchema,
+	schema: PropsSchema,
 	field: string,
 	status: CheckStatus,
 ) {

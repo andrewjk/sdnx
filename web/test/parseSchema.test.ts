@@ -41,12 +41,15 @@ test("parse schema: basic test", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input)
@@ -55,7 +58,10 @@ test("parse schema: basic test", () => {
 		.replaceAll("len(", " len(")
 		.replaceAll("min len(", " minlen(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -69,17 +75,23 @@ test("parse schema: simple type", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -94,17 +106,23 @@ test("parse schema: type with description", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -121,17 +139,23 @@ test("parse schema: union type", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -148,17 +172,23 @@ test("parse schema: type with parameter", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input).replaceAll("min(", " min(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -179,17 +209,23 @@ test("parse schema: object type", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -208,17 +244,23 @@ test("parse schema: array type", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -256,12 +298,15 @@ test("parse schema: mix macro", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input)
@@ -270,7 +315,73 @@ test("parse schema: mix macro", () => {
 		.replaceAll("len(", " len(")
 		.replaceAll("min len(", " minlen(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
+	expect(unspacedResult.data).toEqual(expected);
+});
+
+test("parse schema: def macro", () => {
+	const input = `
+{
+	@def(child): {
+		name: string,
+		age: int,
+	},
+	name: string minlen(2),
+	@mix(child),
+	active: bool,
+}`;
+	const expected = {
+		def$1: {
+			type: "def",
+			name: "child",
+			inner: {
+				name: { type: "string" },
+				age: { type: "int" },
+			},
+		},
+		name: {
+			type: "string",
+			validators: { minlen: { raw: "2", required: 2 } },
+		},
+		mix$1: {
+			type: "mix",
+			inner: [
+				{
+					ref$1: {
+						type: "ref",
+						inner: "child",
+					},
+				},
+			],
+		},
+		active: { type: "bool" },
+	};
+
+	const result = parseSchema(input);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+	expect(result.data).toEqual(expected);
+
+	const spacedInput = space(input);
+	const spacedResult = parseSchema(spacedInput);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
+	expect(spacedResult.data).toEqual(expected);
+
+	const unspacedInput = unspace(input)
+		.replaceAll("min(", " min(")
+		.replaceAll("max(", " max(")
+		.replaceAll("len(", " len(")
+		.replaceAll("min len(", " minlen(");
+	const unspacedResult = parseSchema(unspacedInput);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -297,12 +408,15 @@ test("parse schema: props macro", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input)
@@ -311,7 +425,10 @@ test("parse schema: props macro", () => {
 		.replaceAll("len(", " len(")
 		.replaceAll("min len(", " minlen(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -328,17 +445,23 @@ test("parse schema: props macro with pattern", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -358,17 +481,23 @@ test("parse schema: type with multiple parameters", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input).replaceAll("min(", " min(").replaceAll("max(", " max(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -393,17 +522,23 @@ test("parse schema: nested object", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -426,17 +561,23 @@ test("parse schema: array of objects", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -458,17 +599,23 @@ test("parse schema: array of arrays", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -485,17 +632,23 @@ test("parse schema: union of three types", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -536,17 +689,23 @@ test("parse schema: multiple mix macros", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input).replaceAll("min(", " min(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -586,17 +745,23 @@ test("parse schema: mix with multiple alternatives", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input).replaceAll("min(", " min(");
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -605,17 +770,23 @@ test("parse schema: empty object", () => {
 	const expected = {};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -635,17 +806,23 @@ test("parse schema: array with union type", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -668,17 +845,23 @@ test("parse schema: union with array first", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -701,17 +884,23 @@ test("parse schema: union with array second", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -736,17 +925,23 @@ test("parse schema: union with object first", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -771,17 +966,23 @@ test("parse schema: union with object second", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -827,16 +1028,22 @@ test("parse schema: deeply nested structure", () => {
 	};
 
 	const result = parseSchema(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parseSchema(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parseSchema(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });

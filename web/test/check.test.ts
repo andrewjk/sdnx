@@ -8,12 +8,11 @@ test("check: null type valid", () => {
 	const input = `{ meeting_at: null }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: bool type valid", () => {
@@ -21,12 +20,11 @@ test("check: bool type valid", () => {
 	const input = `{ is_active: true }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: bool type invalid", () => {
@@ -34,9 +32,9 @@ test("check: bool type invalid", () => {
 	const input = `{ is_active: 1 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -51,12 +49,11 @@ test("check: int type valid", () => {
 	const input = `{ age: 25 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: int type invalid", () => {
@@ -64,9 +61,9 @@ test("check: int type invalid", () => {
 	const input = `{ age: 25.5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -81,12 +78,11 @@ test("check: num type valid", () => {
 	const input = `{ rating: 4.5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: num type invalid", () => {
@@ -94,9 +90,9 @@ test("check: num type invalid", () => {
 	const input = `{ rating: "excellent" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -111,12 +107,11 @@ test("check: date type valid", () => {
 	const input = `{ birthday: 2025-01-15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: date type invalid", () => {
@@ -124,9 +119,9 @@ test("check: date type invalid", () => {
 	const input = `{ birthday: "2025-01-15" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -141,12 +136,11 @@ test("check: string type valid", () => {
 	const input = `{ name: "Alice" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: string type invalid", () => {
@@ -154,9 +148,9 @@ test("check: string type invalid", () => {
 	const input = `{ name: 123 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -171,9 +165,9 @@ test("check: int union", () => {
 	const input = `{ age: 22 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -190,12 +184,11 @@ test("check: int min validator valid", () => {
 	const input = `{ age: 20 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: int min validator invalid", () => {
@@ -203,9 +196,9 @@ test("check: int min validator invalid", () => {
 	const input = `{ age: 15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -220,12 +213,11 @@ test("check: int max validator valid", () => {
 	const input = `{ age: 50 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: int max validator invalid", () => {
@@ -233,9 +225,9 @@ test("check: int max validator invalid", () => {
 	const input = `{ age: 120 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -250,12 +242,11 @@ test("check: num min validator valid", () => {
 	const input = `{ rating: 4.5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: num min validator invalid", () => {
@@ -263,9 +254,9 @@ test("check: num min validator invalid", () => {
 	const input = `{ rating: -0.5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -280,12 +271,11 @@ test("check: num max validator valid", () => {
 	const input = `{ rating: 4.5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: num max validator invalid", () => {
@@ -293,9 +283,9 @@ test("check: num max validator invalid", () => {
 	const input = `{ rating: 5.5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -310,9 +300,9 @@ test("check: field not found", () => {
 	const input = `{ name: "Alice" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -327,12 +317,11 @@ test("check: multiple fields valid", () => {
 	const input = `{ name: "Alice", age: 25, is_active: true }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: multiple fields invalid", () => {
@@ -340,9 +329,9 @@ test("check: multiple fields invalid", () => {
 	const input = `{ name: "Alice", age: 25.5, is_active: "yes" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -356,12 +345,11 @@ test("check: array valid", () => {
 	const input = `{ fruits: ["apple", "banana"] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: array invalid", () => {
@@ -369,9 +357,9 @@ test("check: array invalid", () => {
 	const input = `{ fruits: ["apple", 5] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -386,12 +374,11 @@ test("check: nested object valid", () => {
 	const input = `{ child: { is_active: true } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: nested object invalid", () => {
@@ -399,9 +386,9 @@ test("check: nested object invalid", () => {
 	const input = `{ child: { is_active: 1 } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -416,12 +403,11 @@ test("check: nested array valid", () => {
 	const input = `{ points: [[0, 1], [1, 2]] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: nested array invalid", () => {
@@ -429,9 +415,9 @@ test("check: nested array invalid", () => {
 	const input = `{ points: [[0, 1], ["one", "two"]] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -447,12 +433,11 @@ test("check: object in array valid", () => {
 	const input = `{ children: [ { name: "Child A", age: 12 }] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: object in array invalid", () => {
@@ -460,9 +445,9 @@ test("check: object in array invalid", () => {
 	const input = `{ children: [ { name: 12, age: 12 }] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -477,12 +462,11 @@ test("check: union type valid first", () => {
 	const input = `{ value: "hello" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: union type valid second", () => {
@@ -490,12 +474,11 @@ test("check: union type valid second", () => {
 	const input = `{ value: 42 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: union type invalid", () => {
@@ -503,9 +486,9 @@ test("check: union type invalid", () => {
 	const input = `{ value: true }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -522,12 +505,11 @@ test("check: union of three types valid", () => {
 	const input = `{ value: false }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: union type in array valid", () => {
@@ -535,12 +517,11 @@ test("check: union type in array valid", () => {
 	const input = `{ values: ["hello", 45] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: union type in array invalid", () => {
@@ -548,9 +529,9 @@ test("check: union type in array invalid", () => {
 	const input = `{ values: [ true ] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -567,12 +548,11 @@ test("check: string min length valid", () => {
 	const input = `{ name: "Alice" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: string min length invalid", () => {
@@ -580,9 +560,9 @@ test("check: string min length invalid", () => {
 	const input = `{ name: "Al" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -597,12 +577,11 @@ test("check: string max length valid", () => {
 	const input = `{ name: "Alice" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: string max length invalid", () => {
@@ -610,9 +589,9 @@ test("check: string max length invalid", () => {
 	const input = `{ name: "Alexander" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -627,12 +606,11 @@ test("check: string regex valid", () => {
 	const input = `{ email: "user@example.com" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: string regex invalid", () => {
@@ -640,9 +618,9 @@ test("check: string regex invalid", () => {
 	const input = `{ email: "not-an-email" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -657,12 +635,11 @@ test("check: date min valid", () => {
 	const input = `{ birthday: 2005-06-15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: date min invalid", () => {
@@ -670,9 +647,9 @@ test("check: date min invalid", () => {
 	const input = `{ birthday: 1995-06-15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -687,12 +664,11 @@ test("check: date max valid", () => {
 	const input = `{ birthday: 2020-06-15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: date max invalid", () => {
@@ -700,9 +676,9 @@ test("check: date max invalid", () => {
 	const input = `{ birthday: 2025-06-15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -717,12 +693,11 @@ test("check: @mix valid first alternative", () => {
 	const input = `{ role: "admin", level: 5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: @mix valid second alternative", () => {
@@ -730,12 +705,11 @@ test("check: @mix valid second alternative", () => {
 	const input = `{ role: "user", plan: "premium" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: @mix invalid all alternatives", () => {
@@ -743,9 +717,9 @@ test("check: @mix invalid all alternatives", () => {
 	const input = `{ role: "guest", plan: "free" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -757,17 +731,80 @@ test("check: @mix invalid all alternatives", () => {
 	}
 });
 
+test("check: @def in @mix valid", () => {
+	const schemaInput = `{ @def(admin): { role: "admin", level: int }, @mix(admin) }`;
+	const input = `{ role: "admin", level: 5 }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+});
+
+test("check: @def in @mix invalid", () => {
+	const schemaInput = `{ @def(admin): { role: "admin", level: int }, @mix(admin) }`;
+	const input = `{ role: "user", level: 5 }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+
+	expect(result.ok).toBe(false);
+	if (result.ok === false) {
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0].message).toContain("'role' must be 'admin'");
+	}
+});
+
+test("check: recursive @def", () => {
+	const schemaInput = `
+{
+	@def(node): {
+		type: string,
+		children: [{
+			@mix(node)
+		}]
+	},
+	@mix(node)
+}`;
+	const input = `
+{
+	type: "root",
+	children: [{
+		type: "p",
+		children: [{
+			type: "h1",
+			children: [],
+		},
+		{
+			type: "text",
+			children: []
+		}]
+	}]
+}`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+});
+
 test("check: @props no pattern valid", () => {
 	const schemaInput = `{ @props(): string }`;
 	const input = `{ greeting: "hello", farewell: "goodbye" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: @props no pattern invalid type", () => {
@@ -775,9 +812,9 @@ test("check: @props no pattern invalid type", () => {
 	const input = `{ greeting: "hello", count: 5 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -788,12 +825,11 @@ test("check: @props with pattern valid", () => {
 	const input = `{ v1: "version 1", v2: "version 2" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: @props with pattern invalid name", () => {
@@ -801,9 +837,9 @@ test("check: @props with pattern invalid name", () => {
 	const input = `{ version1: "version 1", v2: "version 2" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -818,9 +854,9 @@ test("check: @props with pattern invalid type", () => {
 	const input = `{ v1: "version 1", v2: "version 2" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -836,12 +872,11 @@ test("check: multiple validators on int", () => {
 	const input = `{ age: 25 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: multiple validators on int invalid min", () => {
@@ -849,9 +884,9 @@ test("check: multiple validators on int invalid min", () => {
 	const input = `{ age: 15 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -866,9 +901,9 @@ test("check: multiple validators on int invalid max", () => {
 	const input = `{ age: 120 }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -883,12 +918,11 @@ test("check: multiple validators on string", () => {
 	const input = `{ username: "alice" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: multiple validators on string invalid min", () => {
@@ -896,9 +930,9 @@ test("check: multiple validators on string invalid min", () => {
 	const input = `{ username: "al" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -913,9 +947,9 @@ test("check: multiple validators on string invalid regex", () => {
 	const input = `{ username: "Alice123" }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -930,12 +964,11 @@ test("check: bool fixed value valid", () => {
 	const input = `{ accepted: true }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: bool fixed value invalid", () => {
@@ -943,9 +976,9 @@ test("check: bool fixed value invalid", () => {
 	const input = `{ accepted: false }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -960,12 +993,11 @@ test("check: empty array valid", () => {
 	const input = `{ items: [] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: empty object valid", () => {
@@ -973,12 +1005,11 @@ test("check: empty object valid", () => {
 	const input = `{ data: {} }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: deeply nested valid", () => {
@@ -986,12 +1017,11 @@ test("check: deeply nested valid", () => {
 	const input = `{ data: { user: { profile: { name: "Alice", age: 30 } } } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: deeply nested invalid", () => {
@@ -999,9 +1029,9 @@ test("check: deeply nested invalid", () => {
 	const input = `{ data: { user: { profile: { name: 123, age: 30 } } } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -1016,12 +1046,11 @@ test("check: array with nested objects valid", () => {
 	const input = `{ users: [ { name: "Alice", age: 30 }, { name: "Bob", age: 25 } ] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: array with nested objects partial invalid", () => {
@@ -1029,9 +1058,9 @@ test("check: array with nested objects partial invalid", () => {
 	const input = `{ users: [ { name: "Alice", age: 30 }, { name: 45, age: 25 } ] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -1046,12 +1075,11 @@ test("check: union with array valid", () => {
 	const input = `{ items: ["a", "b"] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: union with array invalid", () => {
@@ -1059,9 +1087,9 @@ test("check: union with array invalid", () => {
 	const input = `{ items: ["a", 5] }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -1078,12 +1106,11 @@ test("check: union with object valid", () => {
 	const input = `{ item: { name: "a" } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });
 
 test("check: union with object invalid", () => {
@@ -1091,9 +1118,9 @@ test("check: union with object invalid", () => {
 	const input = `{ item: { name: 5 } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
 
 	expect(result.ok).toBe(false);
@@ -1110,11 +1137,9 @@ test("check: undefined field", () => {
 	const input = `{ name: "Harold" } }`;
 
 	const obj = parse(input);
-	assert(obj.ok);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
 	const schema = parseSchema(schemaInput);
-	assert(schema.ok);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
 	const result = check(obj.data, schema.data);
-
-	if (result.ok === false) expect(result.errors.map((e) => e.message).join(", ")).toBe("");
-	expect(result.ok).toBe(true);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });

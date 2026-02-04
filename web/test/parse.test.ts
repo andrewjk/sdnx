@@ -48,17 +48,23 @@ test("parse: basic test", () => {
 	};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input).replace("10 : 00", "10:00");
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -67,17 +73,23 @@ test("parse: empty object", () => {
 	const expected = {};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -86,17 +98,23 @@ test("parse: negative numbers", () => {
 	const expected = { temp: -10, balance: -3.14 };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -105,17 +123,23 @@ test("parse: positive numbers with plus prefix", () => {
 	const expected = { count: 42, score: 4.5 };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -124,17 +148,23 @@ test("parse: hexadecimal integers", () => {
 	const expected = { color: 0xff00ff, alpha: 0xab };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -143,17 +173,23 @@ test("parse: scientific notation", () => {
 	const expected = { distance: 1.5e10, tiny: 1.5e-5 };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -162,17 +198,23 @@ test("parse: numbers with underscore separators", () => {
 	const expected = { population: 1_000_000, big_number: 1_000_000.123 };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -181,17 +223,23 @@ test("parse: string with escaped quotes", () => {
 	const expected = { quote: `She said \\"Hello\\"` };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -214,17 +262,23 @@ test("parse: multiline string", () => {
 	};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -236,17 +290,23 @@ test("parse: quoted field name", () => {
 	};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -255,17 +315,23 @@ test("parse: field names with numbers and underscores", () => {
 	const expected = { field1: "a", field_2: "b", _private: "c", field_3_name: "d" };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -277,17 +343,23 @@ test("parse: time only", () => {
 	};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input).replace("14 : 30", "14:30").replace("07 : 15 : 30", "07:15:30");
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -296,17 +368,23 @@ test("parse: datetime with timezone offset", () => {
 	const expected = { event_time: new Date("2025-01-15T14:30+02:00") };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input).replace("14 : 30+02 : 00", "14:30+02:00");
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -321,17 +399,23 @@ test("parse: multiple consecutive comments", () => {
 	const expected = { name: "Alice" };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -341,17 +425,23 @@ age: 30}`;
 	const expected = { name: "Bob", age: 30 };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -363,17 +453,23 @@ age: 25 # age field
 	const expected = { name: "Alice", age: 25 };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -409,17 +505,23 @@ test("parse: deeply nested structures", () => {
 	};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -428,17 +530,23 @@ test("parse: single field object", () => {
 	const expected = { name: "Alice" };
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input);
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });
 
@@ -485,16 +593,22 @@ test("parse: large dataset", () => {
 	};
 
 	const result = parse(input);
-	assert(result.ok);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 	expect(result.data).toEqual(expected);
 
 	const spacedInput = space(input).replace("10 : 30 : 00", "10:30:00");
 	const spacedResult = parse(spacedInput);
-	assert(spacedResult.ok);
+	assert(
+		spacedResult.ok,
+		spacedResult.ok ? "" : spacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(spacedResult.data).toEqual(expected);
 
 	const unspacedInput = unspace(input);
 	const unspacedResult = parse(unspacedInput);
-	assert(unspacedResult.ok);
+	assert(
+		unspacedResult.ok,
+		unspacedResult.ok ? "" : unspacedResult.errors.map((e) => e.message).join("\n"),
+	);
 	expect(unspacedResult.data).toEqual(expected);
 });

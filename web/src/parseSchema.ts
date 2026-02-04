@@ -1,6 +1,6 @@
 import convertValue from "./convertValue";
-import AnySchema from "./types/AnySchema";
 import ArraySchema from "./types/ArraySchema";
+import DefSchema from "./types/DefSchema";
 import FieldSchema from "./types/FieldSchema";
 import MixSchema from "./types/MixSchema";
 import ObjectSchema from "./types/ObjectSchema";
@@ -8,6 +8,8 @@ import ParseException from "./types/ParseException";
 import ParseFailure from "./types/ParseFailure";
 import ParseStatus from "./types/ParseStatus";
 import ParseSuccess from "./types/ParseSuccess";
+import PropsSchema from "./types/PropsSchema";
+import RefSchema from "./types/RefSchema";
 import Schema from "./types/Schema";
 import SchemaValue from "./types/SchemaValue";
 import UnionSchema from "./types/UnionSchema";
@@ -16,8 +18,10 @@ import validators from "./validators";
 
 interface ParseSchemaStatus extends ParseStatus {
 	description: string;
+	def: number;
 	mix: number;
 	any: number;
+	refs: Set<string>;
 }
 
 /**
@@ -31,8 +35,10 @@ export default function parseSchema(input: string): ParseSuccess<Schema> | Parse
 		i: 0,
 		errors: [],
 		description: "",
+		def: 1,
 		mix: 1,
 		any: 1,
+		refs: new Set(),
 	};
 
 	trim(status);
@@ -157,22 +163,74 @@ function parseField(result: Record<string, SchemaValue>, status: ParseSchemaStat
 		trim(status);
 		expect("(", status);
 		switch (macro) {
-			case "mix": {
+			case "def": {
+				trim(status);
+				const start = status.i;
+				while (status.i < status.input.length && /[^)]/.test(status.input[status.i])) {
+					status.i++;
+				}
+				const ref = status.input.substring(start, status.i).trim();
+				// TODO: Should allow any valid prop name, including surrounded by quotes
+				if (/[:\s]/.test(ref)) {
+					status.errors.push({
+						message: `Invalid reference name '${ref}'`,
+						index: start,
+						length: ref.length,
+					});
+				}
+				status.i++;
+				trim(status);
+				expect(":", status);
 				trim(status);
 				expect("{", status);
-				const mixResult: MixSchema = {
-					type: "mix",
-					inner: [parseObject(status)],
+				status.refs.add(ref);
+				const defSchema: DefSchema = {
+					type: "def",
+					name: ref,
+					inner: parseObject(status),
 				};
-				result[`mix$${status.mix++}`] = mixResult;
+				result[`def$${status.def++}`] = defSchema;
+				break;
+			}
+			case "mix": {
 				trim(status);
-				while (accept("|", status)) {
+				const mixSchema: MixSchema = {
+					type: "mix",
+					inner: [],
+				};
+				while (true) {
 					trim(status);
-					expect("{", status);
-					mixResult.inner.push(parseObject(status));
+					if (accept("{", status)) {
+						mixSchema.inner.push(parseObject(status));
+					} else {
+						const start = status.i;
+						while (status.i < status.input.length && !/[|)]/.test(status.input[status.i])) {
+							status.i++;
+						}
+						const ref = status.input.substring(start, status.i).trim();
+						if (status.refs.has(ref)) {
+							const refSchema: RefSchema = {
+								type: "ref",
+								inner: ref,
+							};
+							const refResult: Record<string, RefSchema> = {};
+							refResult["ref$1"] = refSchema;
+							mixSchema.inner.push(refResult);
+						} else {
+							status.errors.push({
+								message: `Unknown reference: '${ref}'`,
+								index: start,
+								length: ref.length,
+							});
+						}
+					}
 					trim(status);
+					if (!accept("|", status)) {
+						break;
+					}
 				}
 				expect(")", status);
+				result[`mix$${status.mix++}`] = mixSchema;
 				break;
 			}
 			case "props": {
@@ -196,7 +254,7 @@ function parseField(result: Record<string, SchemaValue>, status: ParseSchemaStat
 				expect(")", status);
 				trim(status);
 				expect(":", status);
-				const anyResult: AnySchema = {
+				const anyResult: PropsSchema = {
 					type: pattern,
 					inner: parseValue(status),
 				};
@@ -302,7 +360,10 @@ function parseType(status: ParseSchemaStatus) {
 		status.i++;
 	}
 	const type = status.input.substring(start, status.i).trim();
-	if (!["undef", "null", "bool", "int", "num", "string", "date"].includes(type)) {
+	if (
+		!["undef", "null", "bool", "int", "num", "string", "date"].includes(type) &&
+		!status.refs.has(type)
+	) {
 		convertValue(type, start, status.errors);
 	}
 
