@@ -369,6 +369,19 @@ private func parseType(_ status: inout Status) throws -> FieldSchema {
         }
         let validator = String(status.input[validatorStart..<status.i])
         
+        // Check if validator is supported for this type
+        let validatorsDict = getValidators()
+        if let typeValidators = validatorsDict[type] {
+            if typeValidators[validator] == nil {
+                let index = status.input.distance(from: status.input.startIndex, to: validatorStart)
+                status.errors.append(ParseError(
+                    message: "Unsupported validator '\(validator)'",
+                    index: index,
+                    length: validator.count
+                ))
+            }
+        }
+        
         var raw = "true"
         var required: Any? = true
         
