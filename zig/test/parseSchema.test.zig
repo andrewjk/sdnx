@@ -440,13 +440,13 @@ test "parse schema: mix macro" {
     }
 }
 
-test "parse schema: any macro" {
+test "parse schema: props macro" {
     const allocator = std.testing.allocator;
 
     const input =
         \\{
         \\  name: string minlen(2),
-        \\  @any(): int min(16),
+        \\  @props(): int min(16),
         \\  active: bool,
         \\}
     ;
@@ -463,7 +463,7 @@ test "parse schema: any macro" {
         const active_entry = result.schema.?.get("active");
         try std.testing.expect(active_entry != null);
         try std.testing.expect(active_entry.? == .field);
-        const any_entry = result.schema.?.get("any$1");
+        const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
         try std.testing.expect(any_entry.? == .any);
     }
@@ -482,7 +482,7 @@ test "parse schema: any macro" {
         const active_entry = result.schema.?.get("active");
         try std.testing.expect(active_entry != null);
         try std.testing.expect(active_entry.? == .field);
-        const any_entry = result.schema.?.get("any$1");
+        const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
         try std.testing.expect(any_entry.? == .any);
     }
@@ -503,18 +503,18 @@ test "parse schema: any macro" {
         const active_entry = result.schema.?.get("active");
         try std.testing.expect(active_entry != null);
         try std.testing.expect(active_entry.? == .field);
-        const any_entry = result.schema.?.get("any$1");
+        const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
         try std.testing.expect(any_entry.? == .any);
     }
 }
 
-test "parse schema: any macro with pattern" {
+test "parse schema: props macro with pattern" {
     const allocator = std.testing.allocator;
 
     const input =
         \\{
-        \\  @any(/v\d/): string,
+        \\  @props(/v\d/): string,
         \\}
     ;
 
@@ -524,7 +524,7 @@ test "parse schema: any macro with pattern" {
         defer result.deinit();
         try std.testing.expect(result.ok);
         try std.testing.expect(result.schema.?.count() == 1);
-        const any_entry = result.schema.?.get("any$1");
+        const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
         try std.testing.expect(any_entry.? == .any);
         try std.testing.expect(std.mem.eql(u8, any_entry.?.any.type, "/v\\d/"));
@@ -538,7 +538,7 @@ test "parse schema: any macro with pattern" {
         defer result.deinit();
         try std.testing.expect(result.ok);
         try std.testing.expect(result.schema.?.count() == 1);
-        const any_entry = result.schema.?.get("any$1");
+        const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
         try std.testing.expect(any_entry.? == .any);
         try std.testing.expect(std.mem.eql(u8, any_entry.?.any.type, "/v\\d/"));
@@ -552,7 +552,7 @@ test "parse schema: any macro with pattern" {
         defer result.deinit();
         try std.testing.expect(result.ok);
         try std.testing.expect(result.schema.?.count() == 1);
-        const any_entry = result.schema.?.get("any$1");
+        const any_entry = result.schema.?.get("props$1");
         try std.testing.expect(any_entry != null);
         try std.testing.expect(any_entry.? == .any);
         try std.testing.expect(std.mem.eql(u8, any_entry.?.any.type, "/v\\d/"));

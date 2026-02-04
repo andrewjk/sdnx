@@ -239,7 +239,7 @@ private func parseField(_ result: inout Schema, _ status: inout Status) throws {
             result["mix$\(status.mix)"] = MixSchema(inner: alternatives)
             status.mix += 1
             
-        case "any":
+        case "props":
             trim(&status)
             let patternStart = status.i
             var level = 1
@@ -261,7 +261,7 @@ private func parseField(_ result: inout Schema, _ status: inout Status) throws {
             trim(&status)
             try expect(":", &status)
             let anyResult = AnySchema(pattern: pattern, inner: try parseValue(&status))
-            result["any$\(status.any)"] = anyResult
+            result["props$\(status.any)"] = anyResult
             status.any += 1
             
         default:

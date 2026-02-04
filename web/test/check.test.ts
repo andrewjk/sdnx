@@ -757,8 +757,8 @@ test("check: @mix invalid all alternatives", () => {
 	}
 });
 
-test("check: @any no pattern valid", () => {
-	const schemaInput = `{ @any(): string }`;
+test("check: @props no pattern valid", () => {
+	const schemaInput = `{ @props(): string }`;
 	const input = `{ greeting: "hello", farewell: "goodbye" }`;
 
 	const obj = parse(input);
@@ -770,8 +770,8 @@ test("check: @any no pattern valid", () => {
 	expect(result.ok).toBe(true);
 });
 
-test("check: @any no pattern invalid type", () => {
-	const schemaInput = `{ @any(): string }`;
+test("check: @props no pattern invalid type", () => {
+	const schemaInput = `{ @props(): string }`;
 	const input = `{ greeting: "hello", count: 5 }`;
 
 	const obj = parse(input);
@@ -783,8 +783,8 @@ test("check: @any no pattern invalid type", () => {
 	expect(result.ok).toBe(false);
 });
 
-test("check: @any with pattern valid", () => {
-	const schemaInput = `{ @any(/v\\d/): string }`;
+test("check: @props with pattern valid", () => {
+	const schemaInput = `{ @props(/v\\d/): string }`;
 	const input = `{ v1: "version 1", v2: "version 2" }`;
 
 	const obj = parse(input);
@@ -796,8 +796,8 @@ test("check: @any with pattern valid", () => {
 	expect(result.ok).toBe(true);
 });
 
-test("check: @any with pattern invalid name", () => {
-	const schemaInput = `{ @any(/v\\d/): string }`;
+test("check: @props with pattern invalid name", () => {
+	const schemaInput = `{ @props(/v\\d/): string }`;
 	const input = `{ version1: "version 1", v2: "version 2" }`;
 
 	const obj = parse(input);
@@ -813,8 +813,8 @@ test("check: @any with pattern invalid name", () => {
 	}
 });
 
-test("check: @any with pattern invalid type", () => {
-	const schemaInput = `{ @any(/v\\d/): int }`;
+test("check: @props with pattern invalid type", () => {
+	const schemaInput = `{ @props(/v\\d/): int }`;
 	const input = `{ v1: "version 1", v2: "version 2" }`;
 
 	const obj = parse(input);

@@ -274,11 +274,11 @@ test("parse schema: mix macro", () => {
 	expect(unspacedResult.data).toEqual(expected);
 });
 
-test("parse schema: any macro", () => {
+test("parse schema: props macro", () => {
 	const input = `
 {
 	name: string minlen(2),
-	@any(): int min(16),
+	@props(): int min(16),
 	active: bool,
 }`;
 	const expected = {
@@ -286,7 +286,7 @@ test("parse schema: any macro", () => {
 			type: "string",
 			validators: { minlen: { raw: "2", required: 2 } },
 		},
-		any$1: {
+		props$1: {
 			type: "",
 			inner: {
 				type: "int",
@@ -315,13 +315,13 @@ test("parse schema: any macro", () => {
 	expect(unspacedResult.data).toEqual(expected);
 });
 
-test("parse schema: any macro with pattern", () => {
+test("parse schema: props macro with pattern", () => {
 	const input = `
 {
-	@any(/v\\d/): string,
+	@props(/v\\d/): string,
 }`;
 	const expected = {
-		any$1: {
+		props$1: {
 			type: "/v\\d/",
 			inner: { type: "string" },
 		},

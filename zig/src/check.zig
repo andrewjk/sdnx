@@ -99,7 +99,7 @@ fn checkObjectSchemaInner(
                     if (!try checkMixSchema(allocator, input, field_schema.mix, errors)) {
                         result = false;
                     }
-                } else if (std.mem.startsWith(u8, field, "any$")) {
+                } else if (std.mem.startsWith(u8, field, "props$")) {
                     if (!try checkAnySchema(allocator, &obj, field_schema.any, field, errors)) {
                         result = false;
                     }

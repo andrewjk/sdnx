@@ -58,7 +58,7 @@ function checkObjectSchemaInner(
 			if (!checkMixSchema(input, fieldSchema as MixSchema, status)) {
 				result = false;
 			}
-		} else if (field.startsWith("any$")) {
+		} else if (field.startsWith("props$")) {
 			if (!checkAnySchema(input, fieldSchema as AnySchema, field, status)) {
 				result = false;
 			}

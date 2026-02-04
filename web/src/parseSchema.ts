@@ -175,7 +175,7 @@ function parseField(result: Record<string, SchemaValue>, status: ParseSchemaStat
 				expect(")", status);
 				break;
 			}
-			case "any": {
+			case "props": {
 				trim(status);
 				// Consume until space or `)`
 				const start = status.i;
@@ -200,7 +200,7 @@ function parseField(result: Record<string, SchemaValue>, status: ParseSchemaStat
 					type: pattern,
 					inner: parseValue(status),
 				};
-				result[`any$${status.mix++}`] = anyResult;
+				result[`props$${status.mix++}`] = anyResult;
 				break;
 			}
 			default: {

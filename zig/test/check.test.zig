@@ -1184,10 +1184,10 @@ test "check: @mix invalid all alternatives" {
     try std.testing.expect(std.mem.indexOf(u8, result.err_list.items[0].message, "'role' must be 'user'") != null);
 }
 
-test "check: @any no pattern valid" {
+test "check: @props no pattern valid" {
     const allocator = std.testing.allocator;
 
-    const schema_input = "{ @any(): string }";
+    const schema_input = "{ @props(): string }";
     const data_input = "{ greeting: \"hello\", farewell: \"goodbye\" }";
 
     var schema_result = parseSchema(allocator, schema_input);
@@ -1204,10 +1204,10 @@ test "check: @any no pattern valid" {
     try std.testing.expect(result == .ok);
 }
 
-test "check: @any no pattern invalid type" {
+test "check: @props no pattern invalid type" {
     const allocator = std.testing.allocator;
 
-    const schema_input = "{ @any(): string }";
+    const schema_input = "{ @props(): string }";
     const data_input = "{ greeting: \"hello\", count: 5 }";
 
     var schema_result = parseSchema(allocator, schema_input);
@@ -1224,10 +1224,10 @@ test "check: @any no pattern invalid type" {
     try std.testing.expect(result == .err_list);
 }
 
-test "check: @any with pattern valid" {
+test "check: @props with pattern valid" {
     const allocator = std.testing.allocator;
 
-    const schema_input = "{ @any(/v\\d/): string }";
+    const schema_input = "{ @props(/v\\d/): string }";
     const data_input = "{ v1: \"version 1\", v2: \"version 2\" }";
 
     var schema_result = parseSchema(allocator, schema_input);
@@ -1244,10 +1244,10 @@ test "check: @any with pattern valid" {
     try std.testing.expect(result == .ok);
 }
 
-test "check: @any with pattern invalid name" {
+test "check: @props with pattern invalid name" {
     const allocator = std.testing.allocator;
 
-    const schema_input = "{ @any(/v\\d/): string }";
+    const schema_input = "{ @props(/v\\d/): string }";
     const data_input = "{ version1: \"version 1\", v2: \"version 2\" }";
 
     var schema_result = parseSchema(allocator, schema_input);
@@ -1266,10 +1266,10 @@ test "check: @any with pattern invalid name" {
     try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "'version1' name doesn't match pattern '/v\\d/'"));
 }
 
-test "check: @any with pattern invalid type" {
+test "check: @props with pattern invalid type" {
     const allocator = std.testing.allocator;
 
-    const schema_input = "{ @any(/v\\d/): int }";
+    const schema_input = "{ @props(/v\\d/): int }";
     const data_input = "{ v1: \"version 1\", v2: \"version 2\" }";
 
     var schema_result = parseSchema(allocator, schema_input);

@@ -690,18 +690,18 @@ Mix can have more than two alternatives:
 }
 ````````````````````````````````
 
-### @any
+### @props
 
-Use the `@any` macro in a spec file to allow multiple fields with arbitrary names. Pass a regex to restrict the format of the names.
+Use the `@props` macro in a spec file to allow multiple fields with arbitrary names. Pass a regex to restrict the format of the names.
 
 ```````````````````````````````` example
-{ @any(): string }
+{ @props(): string }
 .
 { greeting: "hi!" }
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ @any(/v\d(_\d)*/): string }
+{ @props(/v\d(_\d)*/): string }
 .
 {
     v1: "version 1",
@@ -710,7 +710,7 @@ Use the `@any` macro in a spec file to allow multiple fields with arbitrary name
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ @any(/^data_/): int }
+{ @props(/^data_/): int }
 .
 {
     data_count: 42,
@@ -719,7 +719,7 @@ Use the `@any` macro in a spec file to allow multiple fields with arbitrary name
 ````````````````````````````````
 
 ```````````````````````````````` example
-{ @any(/metadata_.*/): string }
+{ @props(/metadata_.*/): string }
 .
 {
     metadata_author: "John",

@@ -412,11 +412,11 @@ import Foundation
         #expect(unspacedResult["mix$1"]?.type == "mix")
     }
     
-    @Test func parseSchemaAnyMacro() throws {
+    @Test func parseSchemaPropsMacro() throws {
         let input = """
     {
         name: string minlen(2),
-        @any(): int min(16),
+        @props(): int min(16),
         active: bool,
     }
     """
@@ -426,11 +426,11 @@ import Foundation
         #expect(result["name"]?.type == "string")
         #expect(result["active"]?.type == "bool")
         
-        if let anySchema = result["any$1"] as? AnySchema {
+        if let anySchema = result["props$1"] as? AnySchema {
             #expect(anySchema.inner.type == "int")
             #expect(anySchema.inner.validators?["min"]?.raw == "16")
         } else {
-            #expect(Bool(false), "any$1 should exist")
+            #expect(Bool(false), "props$1 should exist")
         }
         
         // Test with spaced input
@@ -438,36 +438,36 @@ import Foundation
         let spacedResult = try unwrapParseSchemaResult(parseSchema(spacedInput))
         #expect(spacedResult["name"]?.type == "string")
         #expect(spacedResult["active"]?.type == "bool")
-        #expect(spacedResult["any$1"]?.type == "")
+        #expect(spacedResult["props$1"]?.type == "")
         
         // Test with unspaced input
         let unspacedInput = applyUnspaceReplacements(unspace(input))
         let unspacedResult = try unwrapParseSchemaResult(parseSchema(unspacedInput))
         #expect(unspacedResult["name"]?.type == "string")
         #expect(unspacedResult["active"]?.type == "bool")
-        #expect(unspacedResult["any$1"]?.type == "")
+        #expect(unspacedResult["props$1"]?.type == "")
     }
     
-    @Test func parseSchemaAnyMacroWithPattern() throws {
+    @Test func parseSchemaPropsMacroWithPattern() throws {
         let input = """
     {
-        @any(/v\\d/): string,
+        @props(/v\\d/): string,
     }
     """
         
         let result = try unwrapParseSchemaResult(parseSchema(input))
         
-        if let anySchema = result["any$1"] as? AnySchema {
+        if let anySchema = result["props$1"] as? AnySchema {
             #expect(anySchema.type == "/v\\d/")
             #expect(anySchema.inner.type == "string")
         } else {
-            #expect(Bool(false), "any$1 should exist")
+            #expect(Bool(false), "props$1 should exist")
         }
         
         // Test with spaced input
         let spacedInput = space(input)
         let spacedResult = try unwrapParseSchemaResult(parseSchema(spacedInput))
-        if let spacedAnySchema = spacedResult["any$1"] as? AnySchema {
+        if let spacedAnySchema = spacedResult["props$1"] as? AnySchema {
             #expect(spacedAnySchema.type == "/v\\d/")
             #expect(spacedAnySchema.inner.type == "string")
         }
@@ -475,7 +475,7 @@ import Foundation
         // Test with unspaced input
         let unspacedInput = unspace(input)
         let unspacedResult = try unwrapParseSchemaResult(parseSchema(unspacedInput))
-        if let unspacedAnySchema = unspacedResult["any$1"] as? AnySchema {
+        if let unspacedAnySchema = unspacedResult["props$1"] as? AnySchema {
             #expect(unspacedAnySchema.type == "/v\\d/")
             #expect(unspacedAnySchema.inner.type == "string")
         }

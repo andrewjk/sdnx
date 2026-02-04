@@ -47,7 +47,7 @@ func checkObjectSchemaInner(_ input: OrderedDictionary<String, Any>, schema: Sch
                     result = false
                 }
             }
-        } else if field.hasPrefix("any$") {
+        } else if field.hasPrefix("props$") {
             if let anySchema = fieldSchema as? AnySchema {
                 if !checkAnySchema(input, schema: anySchema, field: field, status: &status) {
                     result = false

@@ -749,7 +749,7 @@ import Testing
     }
     
     @Test func anyNoPatternValid() throws {
-        let schemaInput = "{ @any(): string }"
+        let schemaInput = "{ @props(): string }"
         let input = "{ greeting: \"hello\", farewell: \"goodbye\" }"
         let obj = try unwrapParseResult(parse(input))
         let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
@@ -762,7 +762,7 @@ import Testing
     }
     
     @Test func anyNoPatternInvalidType() throws {
-        let schemaInput = "{ @any(): string }"
+        let schemaInput = "{ @props(): string }"
         let input = "{ greeting: \"hello\", count: 5 }"
         let obj = try unwrapParseResult(parse(input))
         let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
@@ -775,7 +775,7 @@ import Testing
     }
     
     @Test func anyWithPatternValid() throws {
-        let schemaInput = "{ @any(/v\\d/): string }"
+        let schemaInput = "{ @props(/v\\d/): string }"
         let input = "{ v1: \"version 1\", v2: \"version 2\" }"
         let obj = try unwrapParseResult(parse(input))
         let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
@@ -788,7 +788,7 @@ import Testing
     }
     
     @Test func anyWithPatternInvalidName() throws {
-        let schemaInput = "{ @any(/v\\d/): string }"
+        let schemaInput = "{ @props(/v\\d/): string }"
         let input = "{ version1: \"version 1\", v2: \"version 2\" }"
         let obj = try unwrapParseResult(parse(input))
         let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
@@ -805,7 +805,7 @@ import Testing
     }
     
     @Test func anyWithPatternInvalidType() throws {
-        let schemaInput = "{ @any(/v\\d/): int }"
+        let schemaInput = "{ @props(/v\\d/): int }"
         let input = "{ v1: \"version 1\", v2: \"version 2\" }"
         let obj = try unwrapParseResult(parse(input))
         let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))

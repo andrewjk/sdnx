@@ -312,7 +312,7 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
                 allocator.free(key);
                 mix_result.deinit(allocator);
             };
-        } else if (std.mem.eql(u8, macro, "any")) {
+        } else if (std.mem.eql(u8, macro, "props")) {
             trim(status);
 
             const pattern_start = status.i;
@@ -339,7 +339,7 @@ fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
             const inner = allocator.create(SchemaValue) catch return;
             inner.* = inner_value;
 
-            const key = std.fmt.allocPrint(allocator, "any${d}", .{status.any_counter}) catch return;
+            const key = std.fmt.allocPrint(allocator, "props${d}", .{status.any_counter}) catch return;
             status.any_counter += 1;
 
             const pattern_dup = allocator.dupe(u8, pattern) catch return;
