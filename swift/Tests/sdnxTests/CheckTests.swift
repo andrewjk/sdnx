@@ -1108,4 +1108,72 @@ import Testing
             #expect(Bool(false))
         }
     }
+    
+    @Test func defInMixValid() throws {
+        let schemaInput = "{ @def(admin): { role: \"admin\", level: int }, @mix(admin) }"
+        let input = "{ role: \"admin\", level: 5 }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .success = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+    
+    @Test func defInMixInvalid() throws {
+        let schemaInput = "{ @def(admin): { role: \"admin\", level: int }, @mix(admin) }"
+        let input = "{ role: \"user\", level: 5 }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .failure = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        if case let .failure(failure) = result {
+            #expect(failure.errors.count == 1)
+            #expect(failure.errors[0].message.contains("'role' must be 'admin'"))
+        }
+    }
+    
+    @Test func recursiveDef() throws {
+        let schemaInput = """
+    {
+        @def(node): {
+            type: string,
+            children: [{
+                @mix(node)
+            }]
+        },
+        @mix(node)
+    }
+    """
+        let input = """
+    {
+        type: "root",
+        children: [{
+            type: "p",
+            children: [{
+                type: "h1",
+                children: [],
+            },
+            {
+                type: "text",
+                children: []
+            }]
+        }]
+    }
+    """
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .success = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
 }

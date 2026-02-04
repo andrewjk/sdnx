@@ -426,9 +426,9 @@ import Foundation
         #expect(result["name"]?.type == "string")
         #expect(result["active"]?.type == "bool")
         
-        if let anySchema = result["props$1"] as? AnySchema {
-            #expect(anySchema.inner.type == "int")
-            #expect(anySchema.inner.validators?["min"]?.raw == "16")
+        if let propsSchema = result["props$1"] as? PropsSchema {
+            #expect(propsSchema.inner.type == "int")
+            #expect(propsSchema.inner.validators?["min"]?.raw == "16")
         } else {
             #expect(Bool(false), "props$1 should exist")
         }
@@ -457,9 +457,9 @@ import Foundation
         
         let result = try unwrapParseSchemaResult(parseSchema(input))
         
-        if let anySchema = result["props$1"] as? AnySchema {
-            #expect(anySchema.type == "/v\\d/")
-            #expect(anySchema.inner.type == "string")
+        if let propsSchema = result["props$1"] as? PropsSchema {
+            #expect(propsSchema.type == "/v\\d/")
+            #expect(propsSchema.inner.type == "string")
         } else {
             #expect(Bool(false), "props$1 should exist")
         }
@@ -467,17 +467,17 @@ import Foundation
         // Test with spaced input
         let spacedInput = space(input)
         let spacedResult = try unwrapParseSchemaResult(parseSchema(spacedInput))
-        if let spacedAnySchema = spacedResult["props$1"] as? AnySchema {
-            #expect(spacedAnySchema.type == "/v\\d/")
-            #expect(spacedAnySchema.inner.type == "string")
+        if let spacedPropsSchema = spacedResult["props$1"] as? PropsSchema {
+            #expect(spacedPropsSchema.type == "/v\\d/")
+            #expect(spacedPropsSchema.inner.type == "string")
         }
         
         // Test with unspaced input
         let unspacedInput = unspace(input)
         let unspacedResult = try unwrapParseSchemaResult(parseSchema(unspacedInput))
-        if let unspacedAnySchema = unspacedResult["props$1"] as? AnySchema {
-            #expect(unspacedAnySchema.type == "/v\\d/")
-            #expect(unspacedAnySchema.inner.type == "string")
+        if let unspacedPropsSchema = unspacedResult["props$1"] as? PropsSchema {
+            #expect(unspacedPropsSchema.type == "/v\\d/")
+            #expect(unspacedPropsSchema.inner.type == "string")
         }
     }
     
@@ -1016,5 +1016,54 @@ import Foundation
            let unspacedProfile = unspacedUser.inner["profile"] as? ObjectSchema {
             #expect(unspacedProfile.inner["name"]?.type == "string")
         }
+    }
+    
+    @Test func parseSchemaWithDefInMix() throws {
+        let input = """
+    {
+        @def(child): {
+            name: string,
+            age: int,
+        },
+        name: string minlen(2),
+        @mix(child),
+        active: bool,
+    }
+    """
+        
+        let result = try unwrapParseSchemaResult(parseSchema(input))
+        
+        #expect(result.keys.contains("def$1"))
+        if let defSchema = result["def$1"] as? DefSchema {
+            #expect(defSchema.name == "child")
+            #expect(defSchema.inner["name"]?.type == "string")
+            #expect(defSchema.inner["age"]?.type == "int")
+        } else {
+            #expect(Bool(false), "def$1 should be a DefSchema")
+        }
+        
+        #expect(result.keys.contains("mix$1"))
+        if let mixSchema = result["mix$1"] as? MixSchema {
+            #expect(mixSchema.inner.count == 1)
+            #expect((mixSchema.inner[0]["ref$1"] as? RefSchema)?.inner == "child")
+        } else {
+            #expect(Bool(false), "mix$1 should be a MixSchema")
+        }
+        
+        // Test with spaced input
+        let spacedInput = space(input)
+        let spacedResult = try unwrapParseSchemaResult(parseSchema(spacedInput))
+        #expect(spacedResult["def$1"] != nil)
+        #expect(spacedResult["mix$1"] != nil)
+        
+        // Test with unspaced input
+        let unspacedInput = unspace(input)
+            .replacingOccurrences(of: "min(", with: " min(")
+            .replacingOccurrences(of: "max(", with: " max(")
+            .replacingOccurrences(of: "len(", with: " len(")
+            .replacingOccurrences(of: "min len(", with: " minlen(")
+        let unspacedResult = try unwrapParseSchemaResult(parseSchema(unspacedInput))
+        #expect(unspacedResult["def$1"] != nil)
+        #expect(unspacedResult["mix$1"] != nil)
     }
 }

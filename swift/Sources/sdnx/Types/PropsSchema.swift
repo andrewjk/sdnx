@@ -1,6 +1,6 @@
 import Foundation
 
-public struct AnySchema: SchemaValue {
+public struct PropsSchema: SchemaValue {
     public let type: String
     public var description: String?
     public var validators: [String: ValidatorInfo]?

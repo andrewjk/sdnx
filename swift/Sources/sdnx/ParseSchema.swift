@@ -34,17 +34,21 @@ private struct Status {
     let input: String
     var i: String.Index
     var description: String
+    var def: Int
     var mix: Int
     var any: Int
     var errors: [ParseError]
+    var refs: Set<String>
     
     init(input: String) {
         self.input = input
         self.i = input.startIndex
         self.description = ""
+        self.def = 1
         self.mix = 1
         self.any = 1
         self.errors = []
+        self.refs = []
     }
 }
 
@@ -224,16 +228,64 @@ private func parseField(_ result: inout Schema, _ status: inout Status) throws {
         try expect("(", &status)
         
         switch macro {
-        case "mix":
+        case "def":
+            trim(&status)
+            let start = status.i
+            while status.i < status.input.endIndex && status.input[status.i] != ")" {
+                status.input.formIndex(after: &status.i)
+            }
+            let ref = String(status.input[start..<status.i]).trimmingCharacters(in: .whitespaces)
+            if ref.isEmpty || ref.contains(":") || ref.contains(" ") {
+                let startIndex = status.input.startIndex
+                let index = status.input.distance(from: startIndex, to: start)
+                status.errors.append(ParseError(
+                    message: "Invalid reference name '\(ref)'",
+                    index: index,
+                    length: ref.count
+                ))
+            }
+            status.input.formIndex(after: &status.i)
+            trim(&status)
+            try expect(":", &status)
             trim(&status)
             try expect("{", &status)
-            var alternatives = [try parseObject(&status)]
+            status.refs.insert(ref)
+            let defResult = DefSchema(name: ref, inner: try parseObject(&status))
+            result["def$\(status.def)"] = defResult
+            status.def += 1
+            
+        case "mix":
             trim(&status)
-            while accept("|", &status) {
+            var alternatives: [Schema] = []
+            while true {
                 trim(&status)
-                try expect("{", &status)
-                alternatives.append(try parseObject(&status))
-                trim(&status)
+                if accept("{", &status) {
+                    alternatives.append(try parseObject(&status))
+                    trim(&status)
+                } else {
+                    let start = status.i
+                    while status.i < status.input.endIndex && !["|", ")"].contains(status.input[status.i]) {
+                        status.input.formIndex(after: &status.i)
+                    }
+                    let ref = String(status.input[start..<status.i]).trimmingCharacters(in: .whitespaces)
+                    if status.refs.contains(ref) {
+                        var refResult: Schema = [:]
+                        refResult["ref$1"] = RefSchema(inner: ref)
+                        alternatives.append(refResult)
+                    } else {
+                        let startIndex = status.input.startIndex
+                        let index = status.input.distance(from: startIndex, to: start)
+                        status.errors.append(ParseError(
+                            message: "Unknown reference: '\(ref)'",
+                            index: index,
+                            length: ref.count
+                        ))
+                    }
+                    trim(&status)
+                }
+                if !accept("|", &status) {
+                    break
+                }
             }
             try expect(")", &status)
             result["mix$\(status.mix)"] = MixSchema(inner: alternatives)
@@ -260,7 +312,7 @@ private func parseField(_ result: inout Schema, _ status: inout Status) throws {
             try expect(")", &status)
             trim(&status)
             try expect(":", &status)
-            let anyResult = AnySchema(pattern: pattern, inner: try parseValue(&status))
+            let anyResult = PropsSchema(pattern: pattern, inner: try parseValue(&status))
             result["props$\(status.any)"] = anyResult
             status.any += 1
             
@@ -347,7 +399,7 @@ private func parseType(_ status: inout Status) throws -> FieldSchema {
     
     // Validate type
     let validTypes = ["undef", "null", "bool", "int", "num", "string", "date"]
-    if !validTypes.contains(type) {
+    if !validTypes.contains(type) && !status.refs.contains(type) {
         let index = status.input.distance(from: status.input.startIndex, to: start)
         _ = convertValue(type, start: index, errors: &status.errors)
     }

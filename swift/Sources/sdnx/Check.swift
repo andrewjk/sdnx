@@ -20,7 +20,7 @@ public enum CheckResult {
 // MARK: - Main Check Function
 
 public func check(_ input: OrderedDictionary<String, Any>, schema: Schema) -> CheckResult {
-    var status = CheckStatus(path: [], errors: [])
+    var status = CheckStatus(path: [], errors: [], defs: [:])
     
     _ = checkObjectSchemaInner(input, schema: schema, status: &status)
     
@@ -40,16 +40,26 @@ func checkObjectSchema(_ input: OrderedDictionary<String, Any>, schema: ObjectSc
 func checkObjectSchemaInner(_ input: OrderedDictionary<String, Any>, schema: Schema, status: inout CheckStatus) -> Bool {
     var result = true
     for (field, fieldSchema) in schema {
-		status.path.append(field);
-        if field.hasPrefix("mix$") {
+        status.path.append(field)
+        if field.hasPrefix("def$") {
+            if let defSchema = fieldSchema as? DefSchema {
+                status.defs[defSchema.name] = defSchema.inner
+            }
+        } else if field.hasPrefix("ref$") {
+            if let refSchema = fieldSchema as? RefSchema {
+                if !checkRefSchema(input, ref: refSchema.inner, status: &status) {
+                    result = false
+                }
+            }
+        } else if field.hasPrefix("mix$") {
             if let mixSchema = fieldSchema as? MixSchema {
                 if !checkMixSchema(input, schema: mixSchema, status: &status) {
                     result = false
                 }
             }
         } else if field.hasPrefix("props$") {
-            if let anySchema = fieldSchema as? AnySchema {
-                if !checkAnySchema(input, schema: anySchema, field: field, status: &status) {
+            if let propsSchema = fieldSchema as? PropsSchema {
+                if !checkPropsSchema(input, schema: propsSchema, field: field, status: &status) {
                     result = false
                 }
             }
@@ -59,7 +69,7 @@ func checkObjectSchemaInner(_ input: OrderedDictionary<String, Any>, schema: Sch
                 result = false
             }
         }
-        let _ = status.path.popLast()
+        status.path.removeLast()
     }
     return result
 }
@@ -77,7 +87,7 @@ func checkArraySchema(_ input: [Any], schema: ArraySchema, status: inout CheckSt
 }
 
 func checkUnionSchema(_ value: Any?, schema: UnionSchema, field: String, status: inout CheckStatus) -> Bool {
-    var fieldStatus = CheckStatus(path: status.path, errors: [])
+    var fieldStatus = CheckStatus(path: status.path, errors: [], defs: status.defs)
     var ok = false
     for fs in schema.inner {
         if checkFieldSchema(value, schema: fs, field: field, status: &fieldStatus) {
@@ -94,19 +104,30 @@ func checkUnionSchema(_ value: Any?, schema: UnionSchema, field: String, status:
     return ok
 }
 
+func checkRefSchema(_ input: OrderedDictionary<String, Any>, ref: String, status: inout CheckStatus) -> Bool {
+    guard let def = status.defs[ref] else {
+        status.errors.append(CheckError(
+            path: status.path,
+            message: "Undefined def: \(ref)"
+        ))
+        return false
+    }
+    
+    return checkObjectSchemaInner(input, schema: def, status: &status)
+}
+
 func checkMixSchema(_ input: OrderedDictionary<String, Any>, schema: MixSchema, status: inout CheckStatus) -> Bool {
     var fieldErrors: [CheckError] = []
     var ok = false
     for fs in schema.inner {
-        let mixResult = check(input, schema: fs)
-        switch mixResult {
-        case .success:
+        var fieldStatus = CheckStatus(path: status.path, errors: [], defs: status.defs)
+        if checkObjectSchemaInner(input, schema: fs, status: &fieldStatus) {
             ok = true
             break
-        case .failure(let failure):
+        } else {
             fieldErrors.append(CheckError(
                 path: status.path,
-                message: failure.errors.map { $0.message }.joined(separator: " & ")
+                message: fieldStatus.errors.map { $0.message }.joined(separator: " & ")
             ))
         }
     }
@@ -119,7 +140,7 @@ func checkMixSchema(_ input: OrderedDictionary<String, Any>, schema: MixSchema, 
     return ok
 }
 
-func checkAnySchema(_ input: OrderedDictionary<String, Any>, schema: AnySchema, field: String, status: inout CheckStatus) -> Bool {
+func checkPropsSchema(_ input: OrderedDictionary<String, Any>, schema: PropsSchema, field: String, status: inout CheckStatus) -> Bool {
     var result = true
     for (anyField, value) in input {
         // PERF: could cache this
