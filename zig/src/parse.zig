@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const Value = @import("./types/Value.zig").Value;
+const convertValue = @import("./convertValue.zig").convertValue;
 
 /// Error information with position details
 pub const ParseErrorInfo = struct {
@@ -330,7 +331,7 @@ fn parseValue(allocator: Allocator, status: *Status) anyerror!Value {
     } else if (accept('[', status)) {
         return parseArray(allocator, status);
     } else if (accept('"', status)) {
-        return .{ .string = try parseString(status) };
+        return .{ .string = try parseString(allocator, status) };
     } else {
         const start = status.i;
         while (status.i < status.input.len and !isValueTerminator(status.input[status.i])) {
@@ -342,12 +343,12 @@ fn parseValue(allocator: Allocator, status: *Status) anyerror!Value {
             return .{ .date = try allocator.dupe(u8, value_str) };
         }
 
-        const value = try convertValue(value_str);
+        const value = try convertValue(allocator, value_str);
         return value;
     }
 }
 
-fn parseString(status: *Status) anyerror![]const u8 {
+fn parseString(allocator: Allocator, status: *Status) anyerror![]const u8 {
     const start = status.i;
 
     while (status.i < status.input.len) {
@@ -373,14 +374,75 @@ fn parseString(status: *Status) anyerror![]const u8 {
 
     // Trim leading spaces from multiline strings
     if (value.len > 0 and value[0] == '\n') {
-        const space = value[0 .. std.mem.indexOfScalar(u8, value, ' ') orelse 0];
-        value = value[space.len..];
-        if (value.len > 0 and value[0] == ' ') {
-            value = value[1..];
+        // Find the minimum indentation across all lines (including first line after initial \n)
+        var min_indent: usize = std.math.maxInt(usize);
+        var line_start: usize = 1; // Start after initial \n
+        while (line_start < value.len) {
+            // Count leading whitespace on this line (both spaces and tabs)
+            var indent: usize = 0;
+            while (line_start + indent < value.len and (value[line_start + indent] == ' ' or value[line_start + indent] == '\t')) {
+                indent += 1;
+            }
+            // Only consider non-empty lines for min_indent
+            if (line_start + indent < value.len and value[line_start + indent] != '\n' and indent < min_indent) {
+                min_indent = indent;
+            }
+            // Move to next line
+            while (line_start < value.len and value[line_start] != '\n') {
+                line_start += 1;
+            }
+            line_start += 1; // Skip \n
+        }
+        // Trim the minimum indentation from each line and build result
+        if (min_indent < std.math.maxInt(usize)) {
+            // Calculate result size
+            var result_size: usize = 0;
+            line_start = 1; // Start after initial \n
+            while (line_start < value.len) {
+                // Skip the common indentation
+                const skip = @min(min_indent, value.len - line_start);
+                var pos = line_start + skip;
+                // Count characters until end of line
+                while (pos < value.len and value[pos] != '\n') {
+                    pos += 1;
+                    result_size += 1;
+                }
+                // Add newline if this line ends with one (i.e., not the last line)
+                if (pos < value.len and value[pos] == '\n') {
+                    result_size += 1;
+                }
+                line_start = pos + 1; // Move to start of next line
+            }
+            // Allocate result
+            const result = try allocator.alloc(u8, result_size);
+            errdefer allocator.free(result);
+            // Build result
+            line_start = 1;
+            var j: usize = 0;
+            while (line_start < value.len) {
+                // Skip the common indentation
+                const skip = @min(min_indent, value.len - line_start);
+                var pos = line_start + skip;
+                // Copy characters until end of line
+                while (pos < value.len and value[pos] != '\n') {
+                    result[j] = value[pos];
+                    j += 1;
+                    pos += 1;
+                }
+                // Add newline if this line ends with one (i.e., not the last line)
+                if (pos < value.len and value[pos] == '\n') {
+                    result[j] = '\n';
+                    j += 1;
+                }
+                line_start = pos + 1;
+            }
+            value = result;
+            return value;
         }
     }
 
-    return value;
+    // Always allocate strings so they can be consistently freed
+    return try allocator.dupe(u8, value);
 }
 
 fn parseComment(status: *Status) void {
@@ -414,133 +476,6 @@ fn isDateString(input: []const u8) bool {
     // Datetime with seconds: YYYY-MM-DDTHH:MM:SS (19 chars minimum, plus optional timezone)
     if (input.len >= 19 and input[4] == '-' and input[7] == '-' and input[10] == 'T' and input[13] == ':' and input[16] == ':') return true;
     return false;
-}
-
-/// Convert a string value to appropriate type
-fn convertValue(value_str: []const u8) anyerror!Value {
-    if (std.mem.eql(u8, value_str, "null")) {
-        return .{ .null = {} };
-    } else if (std.mem.eql(u8, value_str, "true")) {
-        return .{ .bool = true };
-    } else if (std.mem.eql(u8, value_str, "false")) {
-        return .{ .bool = false };
-    } else if (value_str.len >= 2 and value_str[0] == '"' and value_str[value_str.len - 1] == '"') {
-        return .{ .string = value_str[1 .. value_str.len - 1] };
-    } else if (value_str.len >= 2 and value_str[0] == '/') {
-        return .{ .string = value_str };
-    } else if (isInt(value_str)) {
-        const cleaned = removeUnderscores(value_str);
-        if (std.mem.indexOfScalar(u8, value_str, 'x') != null or std.mem.indexOfScalar(u8, value_str, 'X') != null) {
-            const hex_str = if (cleaned.len >= 2 and cleaned[0] == '0' and (cleaned[1] == 'x' or cleaned[1] == 'X')) cleaned[2..] else cleaned;
-            const int_val = try std.fmt.parseInt(i64, hex_str, 16);
-            return .{ .int = int_val };
-        }
-        const int_val = try std.fmt.parseInt(i64, cleaned, 10);
-        return .{ .int = int_val };
-    } else if (isFloat(value_str) or isScientific(value_str)) {
-        const cleaned = removeUnderscores(value_str);
-        const float_val = try std.fmt.parseFloat(f64, cleaned);
-        return .{ .num = float_val };
-    } else if (isValidDateOrDateTime(value_str) or isValidTime(value_str)) {
-        return .{ .string = value_str };
-    } else {
-        return error.UnsupportedValueType;
-    }
-}
-
-/// Check if string is an integer
-fn isInt(s: []const u8) bool {
-    if (s.len == 0) return false;
-    var i: usize = 0;
-    if (s[0] == '+' or s[0] == '-') {
-        i = 1;
-        if (i >= s.len) return false;
-    }
-    if (s.len >= 2 and s[i] == '0' and (s[i + 1] == 'x' or s[i + 1] == 'X')) {
-        i += 2;
-        while (i < s.len) {
-            if (!(std.ascii.isDigit(s[i]) or (s[i] >= 'a' and s[i] <= 'f') or (s[i] >= 'A' and s[i] <= 'F'))) {
-                if (s[i] != '_') return false;
-            }
-            i += 1;
-        }
-        return true;
-    }
-    while (i < s.len) {
-        if (!std.ascii.isDigit(s[i]) and s[i] != '_') {
-            return false;
-        }
-        i += 1;
-    }
-    return true;
-}
-
-/// Check if string is a float
-fn isFloat(s: []const u8) bool {
-    if (s.len == 0) return false;
-    var i: usize = 0;
-    if (s[0] == '+' or s[0] == '-') {
-        i = 1;
-        if (i >= s.len) return false;
-    }
-    var has_dot = false;
-    var has_digit_before = false;
-    var has_digit_after = false;
-    while (i < s.len) {
-        if (s[i] == '.') {
-            if (has_dot) return false;
-            has_dot = true;
-        } else if (std.ascii.isDigit(s[i])) {
-            if (has_dot) {
-                has_digit_after = true;
-            } else {
-                has_digit_before = true;
-            }
-        } else if (s[i] != '_') {
-            return false;
-        }
-        i += 1;
-    }
-    return has_dot and has_digit_before and has_digit_after;
-}
-
-/// Check if string is scientific notation
-fn isScientific(s: []const u8) bool {
-    const has_e = std.mem.indexOfScalar(u8, s, 'e') != null or std.mem.indexOfScalar(u8, s, 'E') != null;
-    if (!has_e) return false;
-
-    var i: usize = 0;
-    if (s[0] == '+' or s[0] == '-') {
-        i = 1;
-    }
-    var has_dot = false;
-    var found_e = false;
-    var has_exponent_digit = false;
-
-    while (i < s.len) {
-        if (s[i] == 'e' or s[i] == 'E') {
-            if (found_e) return false;
-            found_e = true;
-            i += 1;
-            if (i < s.len and (s[i] == '+' or s[i] == '-')) {
-                i += 1;
-            }
-            continue;
-        }
-        if (found_e) {
-            if (!std.ascii.isDigit(s[i])) return false;
-            has_exponent_digit = true;
-        } else {
-            if (s[i] == '.') {
-                if (has_dot) return false;
-                has_dot = true;
-            } else if (!std.ascii.isDigit(s[i]) and s[i] != '_') {
-                return false;
-            }
-        }
-        i += 1;
-    }
-    return found_e and has_exponent_digit;
 }
 
 /// Validate date format: YYYY-MM-DD

@@ -318,6 +318,34 @@ import Collections
         #expect(unspacedResult["quote"] as? String == "She said \"Hello\"")
     }
     
+    @Test func multilineString() throws {
+        let input = """
+         {
+          # strings can be multiline
+          skills: "
+          very good at
+            - reading
+            - writing
+            - selling",
+         }
+         """
+        
+        let result = try unwrapParseResult(parse(input))
+        
+        let expectedSkills = "very good at\n  - reading\n  - writing\n  - selling"
+        #expect(result["skills"] as? String == expectedSkills)
+        
+        // Test with spaced input
+        let spacedInput = space(input)
+        let spacedResult = try unwrapParseResult(parse(spacedInput))
+        #expect(spacedResult["skills"] as? String == expectedSkills)
+        
+        // Test with unspaced input
+        let unspacedInput = unspace(input)
+        let unspacedResult = try unwrapParseResult(parse(unspacedInput))
+        #expect(unspacedResult["skills"] as? String == expectedSkills)
+    }
+    
     @Test func quotedFieldName() throws {
         let input = "{\"/field-with-dash\": \"value\", \"with spaces\": \"test\"}"
         

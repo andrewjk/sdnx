@@ -32,6 +32,9 @@ pub const Value = union(enum) {
             .date => |d| {
                 allocator.free(d);
             },
+            .string => |s| {
+                allocator.free(s);
+            },
             else => {},
         }
     }

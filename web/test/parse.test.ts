@@ -195,6 +195,39 @@ test("parse: string with escaped quotes", () => {
 	expect(unspacedResult.data).toEqual(expected);
 });
 
+test("parse: multiline string", () => {
+	const input = `
+{
+	# strings can be multiline
+	skills: "
+		very good at
+		  - reading
+		  - writing
+		  - selling",
+}`;
+
+	const expected = {
+		skills: `very good at
+  - reading
+  - writing
+  - selling`,
+	};
+
+	const result = parse(input);
+	assert(result.ok);
+	expect(result.data).toEqual(expected);
+
+	const spacedInput = space(input);
+	const spacedResult = parse(spacedInput);
+	assert(spacedResult.ok);
+	expect(spacedResult.data).toEqual(expected);
+
+	const unspacedInput = unspace(input);
+	const unspacedResult = parse(unspacedInput);
+	assert(unspacedResult.ok);
+	expect(unspacedResult.data).toEqual(expected);
+});
+
 test("parse: quoted field name", () => {
 	const input = `{"field-with-dash": "value", "with spaces": "test"}`;
 	const expected = {

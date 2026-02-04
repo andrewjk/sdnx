@@ -50,27 +50,27 @@ fn expectBasicTest(result: anytype) !void {
 
 test "parse: basic test" {
     const allocator = std.testing.allocator;
+    const input =
+        \\{
+        \\  active: true,
+        \\  name: "Darren",
+        \\  age: 25,
+        \\  rating: 4.2,
+        \\  # strings can be multiline
+        \\  skills: "very good at",
+        \\  started_at: 2025-01-01,
+        \\  meeting_at: 2026-01-01T10:00,
+        \\  children: [{
+        \\    name: "Rocket",
+        \\    age: 5,
+        \\  }],
+        \\  has_license: true,
+        \\  license_num: "112",
+        \\}
+    ;
 
     // Test original input
     {
-        const input =
-            \\{
-            \\  active: true,
-            \\  name: "Darren",
-            \\  age: 25,
-            \\  rating: 4.2,
-            \\  # strings can be multiline
-            \\  skills: "very good at",
-            \\  started_at: 2025-01-01,
-            \\  meeting_at: 2026-01-01T10:00,
-            \\  children: [{
-            \\    name: "Rocket",
-            \\    age: 5,
-            \\  }],
-            \\  has_license: true,
-            \\  license_num: "112",
-            \\}
-        ;
         var result = parse(allocator, input);
         defer result.deinit();
         try std.testing.expect(result.ok);
@@ -79,24 +79,6 @@ test "parse: basic test" {
 
     // Test spaced input (with time fix)
     {
-        const input =
-            \\{
-            \\  active: true,
-            \\  name: "Darren",
-            \\  age: 25,
-            \\  rating: 4.2,
-            \\  # strings can be multiline
-            \\  skills: "very good at",
-            \\  started_at: 2025-01-01,
-            \\  meeting_at: 2026-01-01T10:00,
-            \\  children: [{
-            \\    name: "Rocket",
-            \\    age: 5,
-            \\  }],
-            \\  has_license: true,
-            \\  license_num: "112",
-            \\}
-        ;
         const spaced = try spaceUnspace.space(allocator, input);
         defer allocator.free(spaced);
         const fixed = try spaceUnspace.replaceAll(allocator, spaced, "10 : 00", "10:00");
@@ -109,24 +91,6 @@ test "parse: basic test" {
 
     // Test unspaced input
     {
-        const input =
-            \\{
-            \\  active: true,
-            \\  name: "Darren",
-            \\  age: 25,
-            \\  rating: 4.2,
-            \\  # strings can be multiline
-            \\  skills: "very good at",
-            \\  started_at: 2025-01-01,
-            \\  meeting_at: 2026-01-01T10:00,
-            \\  children: [{
-            \\    name: "Rocket",
-            \\    age: 5,
-            \\  }],
-            \\  has_license: true,
-            \\  license_num: "112",
-            \\}
-        ;
         const unspaced = try spaceUnspace.unspace(allocator, input);
         defer allocator.free(unspaced);
         var result = parse(allocator, unspaced);
@@ -466,6 +430,58 @@ test "parse: string with escaped quotes" {
         const quote = result.data.?.object.get("quote");
         try std.testing.expect(quote != null);
         try std.testing.expect(quote.? == .string);
+    }
+}
+
+test "parse: multiline string" {
+    const allocator = std.testing.allocator;
+    const input =
+        \\{
+        \\  # strings can be multiline
+        \\  skills: "
+        \\    very good at
+        \\      - reading
+        \\      - writing
+        \\      - selling",
+        \\}
+    ;
+
+    // Test original input
+    {
+        var result = parse(allocator, input);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const skills = result.data.?.object.get("skills");
+        try std.testing.expect(skills != null);
+        try std.testing.expect(skills.? == .string);
+        try std.testing.expect(std.mem.eql(u8, skills.?.string, "very good at\n  - reading\n  - writing\n  - selling"));
+    }
+
+    // Test spaced input
+    {
+        const spaced = try spaceUnspace.space(allocator, input);
+        defer allocator.free(spaced);
+        var result = parse(allocator, spaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const skills = result.data.?.object.get("skills");
+        try std.testing.expect(skills != null);
+        try std.testing.expect(std.mem.eql(u8, skills.?.string, "very good at\n  - reading\n  - writing\n  - selling"));
+    }
+
+    // Test unspaced input
+    {
+        const unspaced = try spaceUnspace.unspace(allocator, input);
+        defer allocator.free(unspaced);
+        var result = parse(allocator, unspaced);
+        defer result.deinit();
+        try std.testing.expect(result.ok);
+        try std.testing.expect(result.data.? == .object);
+        const skills = result.data.?.object.get("skills");
+        try std.testing.expect(skills != null);
+        try std.testing.expect(std.mem.eql(u8, skills.?.string, "very good at\n  - reading\n  - writing\n  - selling"));
     }
 }
 

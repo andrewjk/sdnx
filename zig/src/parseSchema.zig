@@ -10,6 +10,8 @@ const UnionSchema = @import("./types/UnionSchema.zig").UnionSchema;
 const MixSchema = @import("./types/MixSchema.zig").MixSchema;
 const AnySchema = @import("./types/AnySchema.zig").AnySchema;
 const Validator = @import("./types/Validator.zig").Validator;
+const convertValue = @import("./convertValue.zig").convertValue;
+const isTruthy = @import("./convertValue.zig").isTruthy;
 
 /// Error information with position details
 pub const SchemaParseErrorInfo = struct {
@@ -496,7 +498,10 @@ fn parseType(allocator: Allocator, status: *Status) anyerror!SchemaValue {
     const type_str = std.mem.trim(u8, status.input[start..status.i], &std.ascii.whitespace);
 
     if (!isBasicType(type_str)) {
-        _ = convertValue(type_str, -1) catch |err| return err;
+        _ = convertValue(allocator, type_str) catch {
+            addError(status, "Invalid type name", start, type_str.len);
+            return error.ParseError;
+        };
     }
 
     var result = FieldSchema{
@@ -546,18 +551,18 @@ fn parseType(allocator: Allocator, status: *Status) anyerror!SchemaValue {
             if (accept('"', status)) {
                 raw = try parseString(allocator, status, true);
                 raw_allocated = true;
-                required = (try convertValue(raw, -1)) != 0;
+                required = isTruthy(raw);
             } else if (accept('/', status)) {
                 raw = try parseRegex(allocator, status);
                 raw_allocated = true;
-                required = (try convertValue(raw, -1)) != 0;
+                required = isTruthy(raw);
             } else {
                 const raw_start = status.i;
                 while (status.i < status.input.len and !std.ascii.isWhitespace(status.input[status.i]) and status.input[status.i] != ')') {
                     status.i += 1;
                 }
                 raw = std.mem.trim(u8, status.input[raw_start..status.i], &std.ascii.whitespace);
-                required = (try convertValue(raw, -1)) != 0;
+                required = isTruthy(raw);
             }
             trim(status);
             expect(')', status);
@@ -641,280 +646,6 @@ fn parseRegex(allocator: Allocator, status: *Status) anyerror![]const u8 {
     }
 
     return try allocator.dupe(u8, status.input[start..status.i]);
-}
-
-/// Convert string value to appropriate type
-fn convertValue(value_str: []const u8, start: i64) anyerror!i64 {
-    _ = start;
-    if (std.mem.eql(u8, value_str, "null")) {
-        return 0;
-    } else if (std.mem.eql(u8, value_str, "true")) {
-        return 1;
-    } else if (std.mem.eql(u8, value_str, "false")) {
-        return 0;
-    } else if (value_str.len >= 2 and value_str[0] == '"' and value_str[value_str.len - 1] == '"') {
-        return 0;
-    } else if (value_str.len >= 2 and value_str[0] == '/') {
-        return 0;
-    } else if (isInt(value_str)) {
-        const cleaned = removeUnderscores(value_str);
-        if (std.mem.indexOfScalar(u8, value_str, 'x') != null or std.mem.indexOfScalar(u8, value_str, 'X') != null) {
-            const hex_str = if (cleaned.len >= 2 and cleaned[0] == '0' and (cleaned[1] == 'x' or cleaned[1] == 'X')) cleaned[2..] else cleaned;
-            return std.fmt.parseInt(i64, hex_str, 16) catch 0;
-        }
-        return std.fmt.parseInt(i64, cleaned, 10) catch 0;
-    } else if (isFloat(value_str) or isScientific(value_str)) {
-        const cleaned = removeUnderscores(value_str);
-        const float_val = std.fmt.parseFloat(f64, cleaned) catch 0.0;
-        return @intFromFloat(float_val);
-    } else if (isDateOrDateTime(value_str) or isTime(value_str)) {
-        return 0;
-    } else {
-        return error.UnsupportedValueType;
-    }
-}
-
-/// Check if string is an integer
-fn isInt(s: []const u8) bool {
-    if (s.len == 0) return false;
-    var i: usize = 0;
-    if (s[0] == '+' or s[0] == '-') {
-        i = 1;
-        if (i >= s.len) return false;
-    }
-    if (s.len >= 2 and s[i] == '0' and (s[i + 1] == 'x' or s[i + 1] == 'X')) {
-        i += 2;
-        while (i < s.len) {
-            if (!(std.ascii.isDigit(s[i]) or (s[i] >= 'a' and s[i] <= 'f') or (s[i] >= 'A' and s[i] <= 'F'))) {
-                if (s[i] != '_') return false;
-            }
-            i += 1;
-        }
-        return true;
-    }
-    while (i < s.len) {
-        if (!std.ascii.isDigit(s[i]) and s[i] != '_') {
-            return false;
-        }
-        i += 1;
-    }
-    return true;
-}
-
-/// Check if string is a float
-fn isFloat(s: []const u8) bool {
-    if (s.len == 0) return false;
-    var i: usize = 0;
-    if (s[0] == '+' or s[0] == '-') {
-        i = 1;
-        if (i >= s.len) return false;
-    }
-    var has_dot = false;
-    var has_digit_before = false;
-    var has_digit_after = false;
-    while (i < s.len) {
-        if (s[i] == '.') {
-            if (has_dot) return false;
-            has_dot = true;
-        } else if (std.ascii.isDigit(s[i])) {
-            if (has_dot) {
-                has_digit_after = true;
-            } else {
-                has_digit_before = true;
-            }
-        } else if (s[i] != '_') {
-            return false;
-        }
-        i += 1;
-    }
-    // Must have a dot and at least one digit before and after it
-    return has_dot and has_digit_before and has_digit_after;
-}
-
-/// Check if string is scientific notation
-fn isScientific(s: []const u8) bool {
-    const has_e = std.mem.indexOfScalar(u8, s, 'e') != null or std.mem.indexOfScalar(u8, s, 'E') != null;
-    if (!has_e) return false;
-
-    var i: usize = 0;
-    if (s[0] == '+' or s[0] == '-') {
-        i = 1;
-    }
-    var has_dot = false;
-    var found_e = false;
-    var has_exponent_digit = false;
-
-    while (i < s.len) {
-        if (s[i] == 'e' or s[i] == 'E') {
-            if (found_e) return false;
-            found_e = true;
-            i += 1;
-            if (i < s.len and (s[i] == '+' or s[i] == '-')) {
-                i += 1;
-            }
-            continue;
-        }
-        if (found_e) {
-            if (!std.ascii.isDigit(s[i])) return false;
-            has_exponent_digit = true;
-        } else {
-            if (s[i] == '.') {
-                if (has_dot) return false;
-                has_dot = true;
-            } else if (!std.ascii.isDigit(s[i]) and s[i] != '_') {
-                return false;
-            }
-        }
-        i += 1;
-    }
-    // Must have at least one digit after the 'e'
-    return found_e and has_exponent_digit;
-}
-
-/// Check if string is a valid date or datetime
-fn isDateOrDateTime(s: []const u8) bool {
-    // Check for datetime separator (T or space)
-    const has_datetime_sep = std.mem.indexOfScalar(u8, s, 'T') != null or std.mem.indexOfScalar(u8, s, ' ') != null;
-
-    // Must have at least date part with dashes
-    if (std.mem.count(u8, s, "-") < 2) return false;
-
-    // If it has datetime separator, validate the full datetime format
-    if (has_datetime_sep) {
-        return isValidDateTime(s);
-    }
-
-    // Otherwise it's just a date - validate date format
-    return isValidDate(s);
-}
-
-/// Validate date format: YYYY-MM-DD
-fn isValidDate(s: []const u8) bool {
-    if (s.len < 10) return false;
-
-    // Check format: YYYY-MM-DD
-    if (s[4] != '-' or s[7] != '-') return false;
-
-    // Parse year
-    const year = std.fmt.parseInt(u32, s[0..4], 10) catch return false;
-    _ = year;
-
-    // Parse month
-    const month = std.fmt.parseInt(u32, s[5..7], 10) catch return false;
-    if (month < 1 or month > 12) return false;
-
-    // Parse day
-    const day = std.fmt.parseInt(u32, s[8..10], 10) catch return false;
-    if (day < 1 or day > 31) return false;
-
-    return true;
-}
-
-/// Validate datetime format: YYYY-MM-DDTHH:MM or YYYY-MM-DDTHH:MM:SS or with timezone
-fn isValidDateTime(s: []const u8) bool {
-    // Find the separator (T or space)
-    const sep_index = std.mem.indexOfScalar(u8, s, 'T') orelse std.mem.indexOfScalar(u8, s, ' ') orelse return false;
-
-    // Validate date part
-    const date_part = s[0..sep_index];
-    if (!isValidDate(date_part)) return false;
-
-    // Validate time part
-    var time_part = s[sep_index + 1 ..];
-    if (time_part.len < 5) return false;
-
-    // Handle ISO 8601 timezone indicators: U (UTC), L (local time)
-    if (time_part.len > 0 and (time_part[time_part.len - 1] == 'U' or time_part[time_part.len - 1] == 'L')) {
-        time_part = time_part[0 .. time_part.len - 1];
-    }
-
-    // Handle timezone offset if present (e.g., +02:00, -05:00)
-    var time_only = time_part;
-    if (time_part.len > 0) {
-        // Look for + or - after position 0 (could be start of timezone offset)
-        var tz_start: usize = time_part.len;
-        for (time_part, 0..) |c, i| {
-            if (i > 0 and (c == '+' or c == '-')) {
-                tz_start = i;
-                break;
-            }
-        }
-        if (tz_start < time_part.len) {
-            time_only = time_part[0..tz_start];
-        }
-    }
-
-    // Check time format: HH:MM or HH:MM:SS
-    if (time_only.len < 5) return false;
-    if (time_only[2] != ':') return false;
-
-    // Parse hour
-    const hour = std.fmt.parseInt(u32, time_only[0..2], 10) catch return false;
-    if (hour > 23) return false;
-
-    // Parse minute
-    const minute = std.fmt.parseInt(u32, time_only[3..5], 10) catch return false;
-    if (minute > 59) return false;
-
-    // If seconds present, validate them
-    if (time_only.len >= 8) {
-        if (time_only[5] != ':') return false;
-        const second = std.fmt.parseInt(u32, time_only[6..8], 10) catch return false;
-        if (second > 59) return false;
-    }
-
-    return true;
-}
-
-/// Check if string is a valid time
-fn isTime(s: []const u8) bool {
-    // Must have a colon but no dashes (which would indicate a date)
-    if (std.mem.indexOf(u8, s, ":") == null or std.mem.indexOf(u8, s, "-") != null) {
-        return false;
-    }
-
-    // Validate time format: HH:MM or HH:MM:SS
-    if (s.len < 5) return false;
-    if (s[2] != ':') return false;
-
-    // Parse hour
-    const hour = std.fmt.parseInt(u32, s[0..2], 10) catch return false;
-    if (hour > 23) return false;
-
-    // Parse minute
-    const minute = std.fmt.parseInt(u32, s[3..5], 10) catch return false;
-    if (minute > 59) return false;
-
-    // If seconds present, validate them
-    if (s.len >= 8) {
-        if (s[5] != ':') return false;
-        const second = std.fmt.parseInt(u32, s[6..8], 10) catch return false;
-        if (second > 59) return false;
-    }
-
-    return true;
-}
-
-/// Remove underscores from a string
-fn removeUnderscores(s: []const u8) []const u8 {
-    var has_underscore = false;
-    for (s) |ch| {
-        if (ch == '_') {
-            has_underscore = true;
-            break;
-        }
-    }
-    if (!has_underscore) return s;
-
-    var buf: [256]u8 = undefined;
-    var buf_len: usize = 0;
-    for (s) |ch| {
-        if (ch != '_') {
-            buf[buf_len] = ch;
-            buf_len += 1;
-        }
-    }
-    return buf[0..buf_len];
 }
 
 /// Check if type is a basic type
