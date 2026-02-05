@@ -576,6 +576,50 @@ test "check: field not found" {
     try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "Field not found: age"));
 }
 
+test "check: array not found" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ name: string, children: [string] }";
+    const data_input = "{ name: \"Alice\" }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .err_list);
+    try std.testing.expect(result.err_list.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "Field not found: children"));
+}
+
+test "check: object not found" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ name: string, passport: { number: string } }";
+    const data_input = "{ name: \"Alice\" }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .err_list);
+    try std.testing.expect(result.err_list.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "Field not found: passport"));
+}
+
 test "check: multiple fields valid" {
     const allocator = std.testing.allocator;
 

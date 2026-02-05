@@ -319,6 +319,40 @@ import Testing
         }
     }
     
+    @Test func arrayNotFound() throws {
+        let schemaInput = "{ name: string, children: [string] }"
+        let input = "{ name: \"Alice\" }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .failure = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        if case let .failure(failure) = result {
+            #expect(failure.errors.count == 1)
+            #expect(failure.errors[0].message == "Field not found: children")
+        }
+    }
+
+    @Test func objectNotFound() throws {
+        let schemaInput = "{ name: string, passport: { number: string } }"
+        let input = "{ name: \"Alice\" }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .failure = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        if case let .failure(failure) = result {
+            #expect(failure.errors.count == 1)
+            #expect(failure.errors[0].message == "Field not found: passport")
+        }
+    }
+
     @Test func multipleFieldsValid() throws {
         let schemaInput = "{ name: string, age: int, is_active: bool }"
         let input = "{ name: \"Alice\", age: 25, is_active: true }"

@@ -233,6 +233,10 @@ function checkFieldSchema(
 	status: CheckStatus,
 ): boolean {
 	if (schema.type === "object") {
+		if (!checkUndefinedValue(value, schema, field, status)) {
+			return false;
+		}
+
 		if (value === null || typeof value !== "object") {
 			status.errors.push({
 				path: [...status.path],
@@ -240,8 +244,13 @@ function checkFieldSchema(
 			});
 			return false;
 		}
+
 		return checkObjectSchema(value as Record<PropertyKey, unknown>, schema as ObjectSchema, status);
 	} else if (schema.type === "array") {
+		if (!checkUndefinedValue(value, schema, field, status)) {
+			return false;
+		}
+
 		if (!Array.isArray(value)) {
 			status.errors.push({
 				path: [...status.path],
@@ -249,6 +258,7 @@ function checkFieldSchema(
 			});
 			return false;
 		}
+
 		return checkArraySchema(value, schema as ArraySchema, status);
 	} else if (schema.type === "union") {
 		return checkUnionSchema(value, schema as UnionSchema, field, status);
@@ -263,11 +273,7 @@ function checkFieldSchemaValue(
 	field: string,
 	status: CheckStatus,
 ): boolean {
-	if (value === undefined && schema.type !== "undef") {
-		status.errors.push({
-			path: [...status.path],
-			message: `Field not found: ${field}`,
-		});
+	if (!checkUndefinedValue(value, schema, field, status)) {
 		return false;
 	}
 
@@ -368,5 +374,21 @@ function checkFieldSchemaValue(
 		}
 	}
 
+	return true;
+}
+
+function checkUndefinedValue(
+	value: unknown,
+	schema: SchemaValue,
+	field: string,
+	status: CheckStatus,
+) {
+	if (value === undefined && schema.type !== "undef") {
+		status.errors.push({
+			path: [...status.path],
+			message: `Field not found: ${field}`,
+		});
+		return false;
+	}
 	return true;
 }

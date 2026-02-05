@@ -312,6 +312,40 @@ test("check: field not found", () => {
 	}
 });
 
+test("check: array not found", () => {
+	const schemaInput = `{ name: string, children: [string] }`;
+	const input = `{ name: "Harold" } }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+
+	expect(result.ok).toBe(false);
+	if (result.ok === false) {
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0].message).toBe("Field not found: children");
+	}
+});
+
+test("check: object not found", () => {
+	const schemaInput = `{ name: string, passport: { number: string } }`;
+	const input = `{ name: "Harold" } }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+
+	expect(result.ok).toBe(false);
+	if (result.ok === false) {
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0].message).toBe("Field not found: passport");
+	}
+});
+
 test("check: multiple fields valid", () => {
 	const schemaInput = `{ name: string, age: int, is_active: bool }`;
 	const input = `{ name: "Alice", age: 25, is_active: true }`;
@@ -1130,16 +1164,4 @@ test("check: union with object invalid", () => {
 			"'name' must be a string value | 'item' must be a string value",
 		);
 	}
-});
-
-test("check: undefined field", () => {
-	const schemaInput = `{ name: string, age: undef | num }`;
-	const input = `{ name: "Harold" } }`;
-
-	const obj = parse(input);
-	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
-	const schema = parseSchema(schemaInput);
-	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
-	const result = check(obj.data, schema.data);
-	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
 });

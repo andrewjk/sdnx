@@ -165,6 +165,9 @@ func checkPropsSchema(_ input: OrderedDictionary<String, Any>, schema: PropsSche
 func checkFieldSchema(_ value: Any?, schema: SchemaValue, field: String, status: inout CheckStatus) -> Bool {
     switch schema.type {
     case "object":
+        if (!checkUndefinedValue(value, schema: schema, field: field, status: &status)) {
+            return false;
+        }
         if let objSchema = schema as? ObjectSchema {
             guard let dictValue = value as? OrderedDictionary<String, Any> else {
                 status.errors.append(CheckError(
@@ -178,6 +181,9 @@ func checkFieldSchema(_ value: Any?, schema: SchemaValue, field: String, status:
         return false
         
     case "array":
+        if (!checkUndefinedValue(value, schema: schema, field: field, status: &status)) {
+            return false;
+        }
         if let arrSchema = schema as? ArraySchema {
             guard let arrayValue = value as? [Any] else {
                 status.errors.append(CheckError(
@@ -202,14 +208,8 @@ func checkFieldSchema(_ value: Any?, schema: SchemaValue, field: String, status:
 }
 
 func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, status: inout CheckStatus) -> Bool {
-    // Check if value is undefined (nil in Swift)
-    // Allow "undef" and "null" types to have nil values
-    if value == nil && schema.type != "undef" && schema.type != "null" {
-        status.errors.append(CheckError(
-            path: status.path,
-            message: "Field not found: \(field)"
-        ))
-        return false
+    if (!checkUndefinedValue(value, schema: schema, field: field, status: &status)) {
+        return false;
     }
     
     // Check the value's type
@@ -335,4 +335,17 @@ func checkFieldSchemaValue(_ value: Any?, schema: SchemaValue, field: String, st
     }
     
     return true
+}
+
+func checkUndefinedValue(_ value: Any?, schema: SchemaValue, field: String, status: inout CheckStatus) -> Bool {
+    // Check if value is undefined (nil in Swift)
+    // Allow "undef" and "null" types to have nil values
+    if value == nil && schema.type != "undef" && schema.type != "null" {
+        status.errors.append(CheckError(
+            path: status.path,
+            message: "Field not found: \(field)"
+        ))
+        return false
+    }
+    return true;
 }

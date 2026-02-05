@@ -304,6 +304,9 @@ fn checkFieldSchema(
 ) CheckError!bool {
     switch (schema) {
         .object => |obj_schema| {
+            if (!try checkUndefinedValue(allocator, value_opt, &schema, field, errors)) {
+                return false;
+            }
             if (value_opt == null or value_opt.?.* != .object) {
                 var err = ValidationError.init(allocator);
                 err.message = try std.fmt.allocPrint(allocator, "'{s}' must be an object", .{field});
@@ -314,6 +317,9 @@ fn checkFieldSchema(
             return try checkObjectSchemaInner(allocator, value_opt.?, &obj_schema.inner, errors, full_schema);
         },
         .array => |arr_schema| {
+            if (!try checkUndefinedValue(allocator, value_opt, &schema, field, errors)) {
+                return false;
+            }
             if (value_opt == null or value_opt.?.* != .array) {
                 var err = ValidationError.init(allocator);
                 err.message = try std.fmt.allocPrint(allocator, "'{s}' must be an array", .{field});
@@ -394,6 +400,30 @@ fn checkRefSchema(
     return false;
 }
 
+fn checkUndefinedValue(
+    allocator: Allocator,
+    value_opt: ?*const Value,
+    schema: *const SchemaValue,
+    field: []const u8,
+    errors: *std.ArrayList(ValidationError),
+) CheckError!bool {
+    if (value_opt == null) {
+        switch (schema.*) {
+            .field => |field_schema| {
+                if (std.mem.eql(u8, field_schema.type, "undef")) {
+                    return true;
+                }
+            },
+            else => {},
+        }
+        var err = ValidationError.init(allocator);
+        err.message = try std.fmt.allocPrint(allocator, "Field not found: {s}", .{field});
+        try errors.append(allocator, err);
+        return false;
+    }
+    return true;
+}
+
 fn checkFieldSchemaValue(
     allocator: Allocator,
     value_opt: ?*const Value,
@@ -401,15 +431,11 @@ fn checkFieldSchemaValue(
     field: []const u8,
     errors: *std.ArrayList(ValidationError),
 ) CheckError!bool {
-    const value = value_opt orelse {
-        if (!std.mem.eql(u8, schema.type, "undef")) {
-            var err = ValidationError.init(allocator);
-            err.message = try std.fmt.allocPrint(allocator, "Field not found: {s}", .{field});
-            try errors.append(allocator, err);
-            return false;
-        }
-        return true;
-    };
+    const schema_value = SchemaValue{ .field = schema };
+    if (!try checkUndefinedValue(allocator, value_opt, &schema_value, field, errors)) {
+        return false;
+    }
+    const value = value_opt orelse unreachable;
 
     if (std.mem.eql(u8, schema.type, "undef")) {
         if (value.* != .null) {
