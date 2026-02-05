@@ -22,13 +22,18 @@ const validators: Record<string, Record<string, ValidatorFunction>> = {
 		max,
 	},
 	date: {
-		min: mindate,
-		max: maxdate,
+		min: minDate,
+		max: maxDate,
 	},
 	string: {
 		minlen,
 		maxlen,
 		pattern,
+	},
+	array: {
+		minlen: minlenArray,
+		maxlen: maxlenArray,
+		unique: unique,
 	},
 };
 export default validators;
@@ -55,7 +60,7 @@ function max(field: string, value: number, raw: string, required: number, status
 	return true;
 }
 
-function mindate(field: string, value: Date, raw: string, required: Date, status: CheckStatus) {
+function minDate(field: string, value: Date, raw: string, required: Date, status: CheckStatus) {
 	if (value < required) {
 		status.errors.push({
 			path: [...status.path],
@@ -66,7 +71,7 @@ function mindate(field: string, value: Date, raw: string, required: Date, status
 	return true;
 }
 
-function maxdate(field: string, value: Date, raw: string, required: Date, status: CheckStatus) {
+function maxDate(field: string, value: Date, raw: string, required: Date, status: CheckStatus) {
 	if (value > required) {
 		status.errors.push({
 			path: [...status.path],
@@ -117,4 +122,61 @@ function pattern(field: string, value: string, raw: string, required: string, st
 		return false;
 	}
 	return true;
+}
+function minlenArray(
+	field: string,
+	value: Array<any>,
+	raw: string,
+	required: number,
+	status: CheckStatus,
+) {
+	if (value.length < required) {
+		status.errors.push({
+			path: [...status.path],
+			message: `'${field}' must contain at least ${raw} items`,
+		});
+		return false;
+	}
+	return true;
+}
+
+function maxlenArray(
+	field: string,
+	value: Array<any>,
+	raw: string,
+	required: number,
+	status: CheckStatus,
+) {
+	if (value.length > required) {
+		status.errors.push({
+			path: [...status.path],
+			message: `'${field}' cannot contain more than ${raw} items`,
+		});
+		return false;
+	}
+	return true;
+}
+
+function unique(
+	field: string,
+	value: Array<any>,
+	_raw: string,
+	_required: number,
+	status: CheckStatus,
+) {
+	// Maybe only use a Set if longer than a certain length?
+	let set = new Set();
+	let ok = true;
+	for (let i = 0; i < value.length; i++) {
+		if (set.has(value[i])) {
+			status.errors.push({
+				path: [...status.path],
+				message: `'${field}' value '${value[i]}' is not unique`,
+			});
+			ok = false;
+		} else {
+			set.add(value[i]);
+		}
+	}
+	return ok;
 }

@@ -383,7 +383,6 @@ import Collections
 		}
 		"""
 
-print(result)
         #expect(result == expected)
 
         let _ = try unwrapParseResult(parse(result))

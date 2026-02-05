@@ -346,6 +346,7 @@ function parseSingleValue(status: ParseSchemaStatus): SchemaValue {
 			type: "array",
 			inner: parseArray(status),
 		};
+		parseValidators(result, status);
 		return result;
 	} else if (accept('"', status)) {
 		return { type: parseString(status, true) };
@@ -353,6 +354,7 @@ function parseSingleValue(status: ParseSchemaStatus): SchemaValue {
 		return parseType(status);
 	}
 }
+
 function parseType(status: ParseSchemaStatus) {
 	// Parse and check the type
 	const start = status.i;
@@ -374,6 +376,12 @@ function parseType(status: ParseSchemaStatus) {
 		status.description = "";
 	}
 
+	parseValidators(result, status);
+
+	return result;
+}
+
+function parseValidators(field: FieldSchema, status: ParseSchemaStatus) {
 	// Add validators
 	trim(status);
 	while (status.i < status.input.length && /[^|,}\]]/.test(status.input[status.i])) {
@@ -383,7 +391,7 @@ function parseType(status: ParseSchemaStatus) {
 			status.i++;
 		}
 		const validator = status.input.substring(start, status.i);
-		if (validators[type] && !validators[type][validator]) {
+		if (validators[field.type] && !validators[field.type][validator]) {
 			status.errors.push({
 				message: `Unsupported validator '${validator}'`,
 				index: start,
@@ -417,9 +425,8 @@ function parseType(status: ParseSchemaStatus) {
 			expect(")", status);
 			trim(status);
 		}
-		(result.validators ??= {})[validator] = { raw, required };
+		(field.validators ??= {})[validator] = { raw, required };
 	}
-	return result;
 }
 
 function parseString(status: ParseSchemaStatus, withQuotes = false) {

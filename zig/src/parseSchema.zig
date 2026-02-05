@@ -247,6 +247,76 @@ fn parseArray(allocator: Allocator, status: *Status) anyerror!*SchemaValue {
     return result_ptr;
 }
 
+// Parse validators that come after a schema value (for arrays)
+fn parseValueValidators(allocator: Allocator, status: *Status) !?std.StringArrayHashMap(Validator) {
+    var validators: ?std.StringArrayHashMap(Validator) = null;
+    trim(status);
+    while (status.i < status.input.len and status.input[status.i] != '}' and status.input[status.i] != ']' and status.input[status.i] != '|' and status.input[status.i] != ',' and !std.ascii.isWhitespace(status.input[status.i])) {
+        const validator_start = status.i;
+        while (status.i < status.input.len and status.input[status.i] != '}' and status.input[status.i] != ']' and status.input[status.i] != '|' and status.input[status.i] != '(' and !std.ascii.isWhitespace(status.input[status.i])) {
+            status.i += 1;
+        }
+        const validator = std.mem.trim(u8, status.input[validator_start..status.i], &std.ascii.whitespace);
+
+        if (!isValidatorSupportedForArray(validator)) {
+            addError(status, "Unsupported validator for array", validator_start, validator.len);
+            continue;
+        }
+
+        var raw: []const u8 = "true";
+        var raw_allocated = false;
+        var required = true;
+
+        trim(status);
+        if (accept('(', status)) {
+            trim(status);
+            if (accept('"', status)) {
+                raw = try parseString(allocator, status, true);
+                raw_allocated = true;
+                required = isTruthy(raw);
+            } else if (accept('/', status)) {
+                raw = try parseRegex(allocator, status);
+                raw_allocated = true;
+                required = isTruthy(raw);
+            } else {
+                const raw_start = status.i;
+                while (status.i < status.input.len and !std.ascii.isWhitespace(status.input[status.i]) and status.input[status.i] != ')') {
+                    status.i += 1;
+                }
+                raw = std.mem.trim(u8, status.input[raw_start..status.i], &std.ascii.whitespace);
+                required = isTruthy(raw);
+            }
+            trim(status);
+            expect(')', status);
+            trim(status);
+        }
+
+        if (validators == null) {
+            validators = std.StringArrayHashMap(Validator).init(allocator);
+        }
+
+        if (raw_allocated) {
+            try validators.?.put(
+                try allocator.dupe(u8, validator),
+                Validator{
+                    .raw = raw,
+                    .required = required,
+                },
+            );
+        } else {
+            try validators.?.put(
+                try allocator.dupe(u8, validator),
+                Validator{
+                    .raw = try allocator.dupe(u8, raw),
+                    .required = required,
+                },
+            );
+        }
+    }
+
+    return validators;
+}
+
 fn parseField(allocator: Allocator, status: *Status, result: *Schema) void {
     trim(status);
 
@@ -581,10 +651,12 @@ fn parseSingleValue(allocator: Allocator, status: *Status) anyerror!SchemaValue 
         };
     } else if (accept('[', status)) {
         const inner = try parseArray(allocator, status);
+        const validators = parseValueValidators(allocator, status) catch null;
         return .{
             .array = ArraySchema{
                 .type = try allocator.dupe(u8, "array"),
                 .inner = inner,
+                .validators = validators,
             },
         };
     } else if (accept('"', status)) {
@@ -790,6 +862,13 @@ fn isValidatorSupported(type_str: []const u8, validator: []const u8) bool {
         return std.mem.eql(u8, validator, "minlen") or std.mem.eql(u8, validator, "maxlen") or std.mem.eql(u8, validator, "pattern");
     }
     return true;
+}
+
+/// Check if validator is supported for array
+fn isValidatorSupportedForArray(validator: []const u8) bool {
+    return std.mem.eql(u8, validator, "minlen") or
+        std.mem.eql(u8, validator, "maxlen") or
+        std.mem.eql(u8, validator, "unique");
 }
 
 /// Helper function to check if character is alphabetic or underscore

@@ -1414,3 +1414,129 @@ test "check: multiple validators on int" {
 
     try std.testing.expect(result == .ok);
 }
+
+test "check: array minlen valid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ guesses: [ num ] minlen(3) }";
+    const data_input = "{ guesses: [ 8, 3, 4, 6 ] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .ok);
+}
+
+test "check: array minlen invalid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ guesses: [ num ] minlen(3) }";
+    const data_input = "{ guesses: [ 8, 3 ] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .err_list);
+    try std.testing.expect(result.err_list.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "'guesses' must contain at least 3 items"));
+}
+
+test "check: array maxlen valid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ guesses: [ num ] maxlen(3) }";
+    const data_input = "{ guesses: [ 8, 3 ] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .ok);
+}
+
+test "check: array maxlen invalid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ guesses: [ num ] maxlen(3) }";
+    const data_input = "{ guesses: [ 8, 3, 4, 6 ] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .err_list);
+    try std.testing.expect(result.err_list.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "'guesses' cannot contain more than 3 items"));
+}
+
+test "check: array unique valid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ guesses: [ num ] unique }";
+    const data_input = "{ guesses: [ 8, 3 ] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .ok);
+}
+
+test "check: array unique invalid" {
+    const allocator = std.testing.allocator;
+
+    const schema_input = "{ guesses: [ num ] unique }";
+    const data_input = "{ guesses: [ 8, 3, 4, 3 ] }";
+
+    var schema_result = parseSchema(allocator, schema_input);
+    defer schema_result.deinit();
+    try std.testing.expect(schema_result.ok);
+
+    var data = parse(allocator, data_input);
+    defer data.deinit();
+    try std.testing.expect(data.ok);
+
+    var result = try check(allocator, &data.data.?, &schema_result.schema.?);
+    defer result.deinit(allocator);
+
+    try std.testing.expect(result == .err_list);
+    try std.testing.expect(result.err_list.items.len == 1);
+    try std.testing.expect(std.mem.eql(u8, result.err_list.items[0].message, "'guesses' value '3' is not unique"));
+}

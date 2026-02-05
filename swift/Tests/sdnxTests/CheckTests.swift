@@ -1210,4 +1210,94 @@ import Testing
             #expect(Bool(false))
         }
     }
+    
+    @Test func arrayMinlenValid() throws {
+        let schemaInput = "{ guesses: [ num ] minlen(3) }"
+        let input = "{ guesses: [ 8, 3, 4, 6 ] }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .success = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+    
+    @Test func arrayMinlenInvalid() throws {
+        let schemaInput = "{ guesses: [ num ] minlen(3) }"
+        let input = "{ guesses: [ 8, 3 ] }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .failure = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        if case let .failure(failure) = result {
+            #expect(failure.errors.count == 1)
+            #expect(failure.errors[0].message == "'guesses' must contain at least 3 items")
+        }
+    }
+    
+    @Test func arrayMaxlenValid() throws {
+        let schemaInput = "{ guesses: [ num ] maxlen(3) }"
+        let input = "{ guesses: [ 8, 3 ] }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .success = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+    
+    @Test func arrayMaxlenInvalid() throws {
+        let schemaInput = "{ guesses: [ num ] maxlen(3) }"
+        let input = "{ guesses: [ 8, 3, 4, 6 ] }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .failure = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        if case let .failure(failure) = result {
+            #expect(failure.errors.count == 1)
+            #expect(failure.errors[0].message == "'guesses' cannot contain more than 3 items")
+        }
+    }
+    
+    @Test func arrayUniqueValid() throws {
+        let schemaInput = "{ guesses: [ num ] unique }"
+        let input = "{ guesses: [ 8, 3 ] }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .success = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+    
+    @Test func arrayUniqueInvalid() throws {
+        let schemaInput = "{ guesses: [ num ] unique }"
+        let input = "{ guesses: [ 8, 3, 4, 3 ] }"
+        let obj = try unwrapParseResult(parse(input))
+        let schema = try unwrapParseSchemaResult(parseSchema(schemaInput))
+        let result = check(obj, schema: schema)
+        if case .failure = result {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+        if case let .failure(failure) = result {
+            #expect(failure.errors.count == 1)
+            #expect(failure.errors[0].message == "'guesses' value '3' is not unique")
+        }
+    }
 }

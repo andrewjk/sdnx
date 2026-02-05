@@ -1165,3 +1165,102 @@ test("check: union with object invalid", () => {
 		);
 	}
 });
+
+test("check: array with nested objects valid", () => {
+	const schemaInput = `{ users: [ { name: string, age: int } ] }`;
+	const input = `{ users: [ { name: "Alice", age: 30 }, { name: "Bob", age: 25 } ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+});
+
+test("check: array minlen valid", () => {
+	const schemaInput = `{ guesses: [ num ] minlen(3) }`;
+	const input = `{ guesses: [ 8, 3, 4, 6 ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+});
+
+test("check: array minlen invalid", () => {
+	const schemaInput = `{ guesses: [ num ] minlen(3) }`;
+	const input = `{ guesses: [ 8, 3 ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+
+	expect(result.ok).toBe(false);
+	if (result.ok === false) {
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0].message).toBe("'guesses' must contain at least 3 items");
+	}
+});
+
+test("check: array maxlen valid", () => {
+	const schemaInput = `{ guesses: [ num ] maxlen(3) }`;
+	const input = `{ guesses: [ 8, 3 ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+});
+
+test("check: array maxlen invalid", () => {
+	const schemaInput = `{ guesses: [ num ] maxlen(3) }`;
+	const input = `{ guesses: [ 8, 3, 4, 6 ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+
+	expect(result.ok).toBe(false);
+	if (result.ok === false) {
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0].message).toBe("'guesses' cannot contain more than 3 items");
+	}
+});
+
+test("check: array unique valid", () => {
+	const schemaInput = `{ guesses: [ num ] unique }`;
+	const input = `{ guesses: [ 8, 3 ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+	assert(result.ok, result.ok ? "" : result.errors.map((e) => e.message).join("\n"));
+});
+
+test("check: array unique invalid", () => {
+	const schemaInput = `{ guesses: [ num ] unique }`;
+	const input = `{ guesses: [ 8, 3, 4, 3 ] }`;
+
+	const obj = parse(input);
+	assert(obj.ok, obj.ok ? "" : obj.errors.map((e) => e.message).join("\n"));
+	const schema = parseSchema(schemaInput);
+	assert(schema.ok, schema.ok ? "" : schema.errors.map((e) => e.message).join("\n"));
+	const result = check(obj.data, schema.data);
+
+	expect(result.ok).toBe(false);
+	if (result.ok === false) {
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0].message).toBe("'guesses' value '3' is not unique");
+	}
+});

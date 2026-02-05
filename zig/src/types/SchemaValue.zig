@@ -47,9 +47,7 @@ pub const SchemaValue = union(enum) {
                 o.inner.deinit();
             },
             .array => |*a| {
-                allocator.free(a.type);
-                a.inner.deinit(allocator);
-                allocator.destroy(a.inner);
+                a.deinit(allocator);
             },
             .union_type => |*u| {
                 allocator.free(u.type);

@@ -83,7 +83,37 @@ func checkArraySchema(_ input: [Any], schema: ArraySchema, status: inout CheckSt
         }
         let _ = status.path.popLast()
     }
+    
+    if result {
+        let field = status.path.isEmpty ? "" : status.path.last!
+        result = runArrayValidators(input, schema: schema, field: field, status: &status)
+    }
+    
     return result
+}
+
+func runArrayValidators(_ value: [Any], schema: ArraySchema, field: String, status: inout CheckStatus) -> Bool {
+    if let validatorDict = schema.validators {
+        for (method, validator) in validatorDict {
+            if method == "type" || method == "description" {
+                continue
+            }
+            
+            if let validate = getValidators()["array"]?[method] {
+                if !validate(field, value, validator.raw, validator.required ?? NSNull(), &status) {
+                    return false
+                }
+            } else {
+                status.errors.append(CheckError(
+                    path: status.path,
+                    message: "Unsupported validation method for array: \(method)"
+                ))
+                return false
+            }
+        }
+    }
+    
+    return true
 }
 
 func checkUnionSchema(_ value: Any?, schema: UnionSchema, field: String, status: inout CheckStatus) -> Bool {

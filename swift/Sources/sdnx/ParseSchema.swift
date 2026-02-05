@@ -373,6 +373,66 @@ private func parseValue(_ status: inout Status) throws -> SchemaValue {
         value = UnionSchema(inner: inner)
     }
     
+    trim(&status)
+    
+    if var arraySchema = value as? ArraySchema {
+        var validators: [String: ValidatorInfo] = [:]
+        while status.i < status.input.endIndex && !["|", ",", "}", "]"].contains(status.input[status.i]) {
+            let validatorStart = status.i
+            while status.i < status.input.endIndex && !["|", ",", "}", "]", "("].contains(status.input[status.i]) && !status.input[status.i].isWhitespace {
+                status.input.formIndex(after: &status.i)
+            }
+            let validator = String(status.input[validatorStart..<status.i])
+            
+            let validatorsDict = getValidators()
+            if let arrayValidators = validatorsDict["array"] {
+                if arrayValidators[validator] == nil {
+                    let index = status.input.distance(from: status.input.startIndex, to: validatorStart)
+                    status.errors.append(ParseError(
+                        message: "Unsupported validator '\(validator)'",
+                        index: index,
+                        length: validator.count
+                    ))
+                }
+            }
+            
+            var raw = "true"
+            var required: Any? = true
+            
+            trim(&status)
+            if accept("(", &status) {
+                trim(&status)
+                if accept("\"", &status) {
+                    raw = try parseString(&status, withQuotes: true)
+                    let index = status.input.distance(from: status.input.startIndex, to: status.i)
+                    required = convertValue(raw, start: index, errors: &status.errors)
+                } else if accept("/", &status) {
+                    raw = try parseRegex(&status)
+                    let index = status.input.distance(from: status.input.startIndex, to: status.i)
+                    required = convertValue(raw, start: index, errors: &status.errors)
+                } else {
+                    let valStart = status.i
+                    while status.i < status.input.endIndex && !status.input[status.i].isWhitespace && status.input[status.i] != ")" {
+                        status.input.formIndex(after: &status.i)
+                    }
+                    raw = String(status.input[valStart..<status.i])
+                    let index = status.input.distance(from: status.input.startIndex, to: status.i)
+                    required = convertValue(raw, start: index, errors: &status.errors)
+                }
+                trim(&status)
+                try expect(")", &status)
+                trim(&status)
+            }
+            
+            validators[validator] = ValidatorInfo(raw: raw, required: required)
+        }
+        
+        if !validators.isEmpty {
+            arraySchema.validators = validators
+            return arraySchema
+        }
+    }
+    
     return value
 }
 

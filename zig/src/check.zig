@@ -136,6 +136,7 @@ fn checkArraySchema(
     allocator: Allocator,
     input: *const Value,
     schema: ArraySchema,
+    field: []const u8,
     errors: *std.ArrayList(ValidationError),
     full_schema: *const Schema,
 ) CheckError!bool {
@@ -143,12 +144,27 @@ fn checkArraySchema(
         .array => |arr| {
             var result = true;
             for (arr.items, 0..) |item, i| {
-                const field = try std.fmt.allocPrint(allocator, "{d}", .{i});
-                defer allocator.free(field);
-                if (!try checkFieldSchema(allocator, &item, schema.inner.*, field, errors, full_schema)) {
+                const item_field = try std.fmt.allocPrint(allocator, "{d}", .{i});
+                defer allocator.free(item_field);
+                if (!try checkFieldSchema(allocator, &item, schema.inner.*, item_field, errors, full_schema)) {
                     result = false;
                 }
             }
+
+            // Run array validators
+            if (result) {
+                if (schema.validators) |validators_map| {
+                    var iter = validators_map.iterator();
+                    while (iter.next()) |entry| {
+                        const method = entry.key_ptr.*;
+                        const validator = entry.value_ptr.*;
+                        if (!try runArrayValidator(allocator, field, method, arr, validator.raw, errors)) {
+                            result = false;
+                        }
+                    }
+                }
+            }
+
             return result;
         },
         else => {
@@ -326,7 +342,7 @@ fn checkFieldSchema(
                 try errors.append(allocator, err);
                 return false;
             }
-            return try checkArraySchema(allocator, value_opt.?, arr_schema, errors, full_schema);
+            return try checkArraySchema(allocator, value_opt.?, arr_schema, field, errors, full_schema);
         },
         .union_type => |union_schema| {
             if (value_opt == null) {
@@ -646,6 +662,78 @@ fn runValidator(
     }
 
     return true;
+}
+
+fn runArrayValidator(
+    allocator: Allocator,
+    field: []const u8,
+    method: []const u8,
+    arr: std.ArrayList(Value),
+    raw: []const u8,
+    errors: *std.ArrayList(ValidationError),
+) CheckError!bool {
+    if (std.mem.eql(u8, method, "minlen")) {
+        const required_val = try std.fmt.parseInt(usize, raw, 10);
+        if (arr.items.len < required_val) {
+            var err = ValidationError.init(allocator);
+            err.message = try std.fmt.allocPrint(allocator, "'{s}' must contain at least {s} items", .{ field, raw });
+            try errors.append(allocator, err);
+            return false;
+        }
+    } else if (std.mem.eql(u8, method, "maxlen")) {
+        const required_val = try std.fmt.parseInt(usize, raw, 10);
+        if (arr.items.len > required_val) {
+            var err = ValidationError.init(allocator);
+            err.message = try std.fmt.allocPrint(allocator, "'{s}' cannot contain more than {s} items", .{ field, raw });
+            try errors.append(allocator, err);
+            return false;
+        }
+    } else if (std.mem.eql(u8, method, "unique")) {
+        // Check for duplicate values
+        var seen = std.StringHashMap(void).init(allocator);
+        defer {
+            var iter = seen.iterator();
+            while (iter.next()) |entry| {
+                allocator.free(entry.key_ptr.*);
+            }
+            seen.deinit();
+        }
+
+        for (arr.items) |item| {
+            const value_str = try valueToString(allocator, &item);
+            defer allocator.free(value_str);
+
+            const gop = try seen.getOrPut(value_str);
+            if (gop.found_existing) {
+                var err = ValidationError.init(allocator);
+                err.message = try std.fmt.allocPrint(allocator, "'{s}' value '{s}' is not unique", .{ field, value_str });
+                try errors.append(allocator, err);
+                return false;
+            } else {
+                // Store a copy of the string
+                gop.key_ptr.* = try allocator.dupe(u8, value_str);
+            }
+        }
+    } else {
+        var err = ValidationError.init(allocator);
+        err.message = try std.fmt.allocPrint(allocator, "Unsupported validation method for array '{s}': {s}", .{ field, method });
+        try errors.append(allocator, err);
+        return false;
+    }
+
+    return true;
+}
+
+fn valueToString(allocator: Allocator, value: *const Value) ![]const u8 {
+    return switch (value.*) {
+        .string => |s| try std.fmt.allocPrint(allocator, "\"{s}\"", .{s}),
+        .int => |i| try std.fmt.allocPrint(allocator, "{d}", .{i}),
+        .num => |n| try std.fmt.allocPrint(allocator, "{d}", .{n}),
+        .bool => |b| try std.fmt.allocPrint(allocator, "{}", .{b}),
+        .date => |d| try std.fmt.allocPrint(allocator, "{s}", .{d}),
+        .null => try std.fmt.allocPrint(allocator, "null", .{}),
+        else => try std.fmt.allocPrint(allocator, "<complex>", .{}),
+    };
 }
 
 fn matchesPattern(input: []const u8, pattern: []const u8) CheckError!bool {

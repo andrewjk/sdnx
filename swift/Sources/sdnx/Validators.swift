@@ -32,6 +32,11 @@ func getValidators() -> [String: [String: ValidatorFunction]] {
         "maxlen": validateMaxLen,
         "pattern": validatePattern,
     ]
+    validators["array"] = [
+        "minlen": validateMinLenArray,
+        "maxlen": validateMaxLenArray,
+        "unique": validateUnique,
+    ]
     return validators
 }
 
@@ -157,6 +162,74 @@ func validatePattern(field: String, value: Any, raw: String, required: Any, stat
     return true
 }
 
+func validateMinLenArray(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
+    guard let arrayValue = value as? [Any],
+          let requiredLen = required as? NSNumber else {
+        return false
+    }
+    
+    if arrayValue.count < requiredLen.intValue {
+        status.errors.append(CheckError(
+            path: status.path,
+            message: "'\(field)' must contain at least \(raw) items"
+        ))
+        return false
+    }
+    return true
+}
+
+func validateMaxLenArray(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
+    guard let arrayValue = value as? [Any],
+          let requiredLen = required as? NSNumber else {
+        return false
+    }
+    
+    if arrayValue.count > requiredLen.intValue {
+        status.errors.append(CheckError(
+            path: status.path,
+            message: "'\(field)' cannot contain more than \(raw) items"
+        ))
+        return false
+    }
+    return true
+}
+
+func validateUnique(field: String, value: Any, raw: String, required: Any, status: inout CheckStatus) -> Bool {
+    guard let arrayValue = value as? [Any] else {
+        return false
+    }
+    
+    var seen: Set<String> = []
+    var ok = true
+    
+    for item in arrayValue {
+        let itemKey: String
+        if let strItem = item as? String {
+            itemKey = strItem
+        } else if let numItem = item as? NSNumber {
+            itemKey = numItem.stringValue
+        } else if let boolItem = item as? Bool {
+            itemKey = boolItem.description
+        } else if let dateItem = item as? Date {
+            itemKey = ISO8601DateFormatter().string(from: dateItem)
+        } else {
+            continue
+        }
+        
+        if seen.contains(itemKey) {
+            status.errors.append(CheckError(
+                path: status.path,
+                message: "'\(field)' value '\(itemKey)' is not unique"
+            ))
+            ok = false
+        } else {
+            seen.insert(itemKey)
+        }
+    }
+    
+    return ok
+}
+
 // MARK: - NSNumber Extension
 
 extension NSNumber {
@@ -187,7 +260,6 @@ class Regex {
 func createRegex(_ input: String) -> Regex? {
     guard input.hasPrefix("/") else { return nil }
     
-    // Find the pattern and flags
     let patternStart = input.index(after: input.startIndex)
     var patternEnd = patternStart
     var flags = ""
@@ -206,7 +278,6 @@ func createRegex(_ input: String) -> Regex? {
     
     let pattern = String(input[patternStart..<patternEnd])
     
-    // Get flags after the closing /
     if patternEnd < input.endIndex {
         let flagsStart = input.index(after: patternEnd)
         flags = String(input[flagsStart...])

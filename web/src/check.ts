@@ -86,6 +86,7 @@ function checkObjectSchemaInner(
 function checkArraySchema(
 	input: Record<PropertyKey, unknown>[],
 	schema: ArraySchema,
+	field: string,
 	status: CheckStatus,
 ): boolean {
 	let result = true;
@@ -96,6 +97,11 @@ function checkArraySchema(
 		}
 		status.path.pop();
 	}
+
+	if (result) {
+		result = runValidators(input, schema, field, status);
+	}
+
 	return result;
 }
 
@@ -140,29 +146,6 @@ function checkMixSchema(
 	schema: MixSchema,
 	status: CheckStatus,
 ) {
-	/*
-	let fieldErrors: CheckError[] = [];
-	let ok = false;
-	for (let fs of schema.inner) {
-		const mixResult = check(input, fs);
-		if (mixResult.ok) {
-			ok = true;
-			break;
-		} else {
-			fieldErrors.push({
-				path: [...status.path],
-				message: mixResult.errors.map((e) => e.message).join(" & "),
-			});
-		}
-	}
-	if (!ok) {
-		status.errors.push({
-			path: [...status.path],
-			message: fieldErrors.map((e) => e.message).join(" | "),
-		});
-	}
-	return ok;
-	*/
 	let fieldErrors: CheckError[] = [];
 	let ok = false;
 	for (let fs of schema.inner) {
@@ -259,7 +242,7 @@ function checkFieldSchema(
 			return false;
 		}
 
-		return checkArraySchema(value, schema as ArraySchema, status);
+		return checkArraySchema(value, schema as ArraySchema, field, status);
 	} else if (schema.type === "union") {
 		return checkUnionSchema(value, schema as UnionSchema, field, status);
 	} else {
@@ -351,7 +334,10 @@ function checkFieldSchemaValue(
 			return true;
 	}
 
-	// Run the validators
+	return runValidators(value, schema, field, status);
+}
+
+function runValidators(value: unknown, schema: FieldSchema, field: string, status: CheckStatus) {
 	if (schema.validators !== undefined) {
 		for (let [method, { raw, required }] of Object.entries(schema.validators)) {
 			if (method === "type" || method === "description") {
