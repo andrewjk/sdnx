@@ -27,7 +27,9 @@ export default function stringify(obj: Record<PropertyKey, any>, options?: Optio
 }
 
 function printValue(obj: any, status: Status) {
-	if (Array.isArray(obj)) {
+	if (obj === null) {
+		status.result += "null";
+	} else if (Array.isArray(obj)) {
 		status.result += "[";
 		status.indent += 1;
 
@@ -73,8 +75,6 @@ function printValue(obj: any, status: Status) {
 		status.result += status.ansi ? `\x1b[33m${String(obj)}\x1b[0m` : String(obj);
 	} else if (typeof obj === "boolean") {
 		status.result += status.ansi ? `\x1b[34m${String(obj)}\x1b[0m` : String(obj);
-	} else if (obj === null) {
-		status.result += "null";
 	} else {
 		status.result += String(obj);
 	}

@@ -181,7 +181,7 @@ test("stringify: boolean values", () => {
 	expect(parsed.ok).toBe(true);
 });
 
-test.skip("stringify: null values", () => {
+test("stringify: null values", () => {
 	const input = {
 		optional: null,
 		another: null,
