@@ -690,6 +690,88 @@ Mix can have more than two alternatives:
 }
 ````````````````````````````````
 
+### @def
+
+Use the `@def` macro in a spec file to define reusable schema patterns. Definitions can be referenced with `@mix` to avoid repetition and enable recursive schemas.
+
+```````````````````````````````` example
+{
+    @def(address): {
+        line: string,
+        city: string
+    },
+    name: string minlen(2),
+    shipping_address: { @mix(address) },
+    billing_address: { @mix(address) },
+    active: bool
+}
+.
+{
+    name: "Alice",
+    shipping_address: {
+        line: "123 Main St",
+        city: "Springfield"
+    }
+    billing_address: {
+        line: "PO Box 123",
+        city: "Springfield"
+    },
+    active: true
+}
+````````````````````````````````
+
+You can use `@def` to build conditional checks with reusable components:
+
+```````````````````````````````` example
+{
+    @def(admin): { role: "admin", level: int },
+    @def(user): { role: "user" },
+    @mix(admin | user)
+}
+.
+{ role: "admin", level: 5 }
+````````````````````````````````
+
+```````````````````````````````` example
+{
+    @def(admin): { role: "admin", level: int },
+    @def(user): { role: "user" },
+    @mix(admin | user)
+}
+.
+{ role: "guest" }
+.
+Error: 'role' must be 'admin' & Field not found: level | 'role' must be 'user'
+````````````````````````````````
+
+`@def` can be used to create recursive schemas for tree-like structures:
+
+```````````````````````````````` example
+{
+    @def(node): {
+        type: string,
+        children: [{
+            @mix(node)
+        }]
+    },
+    @mix(node)
+}
+.
+{
+    type: "root",
+    children: [{
+        type: "p",
+        children: [{
+            type: "h1",
+            children: []
+        }, {
+            type: "text",
+            children: []
+        }]
+    }]
+}
+````````````````````````````````
+
 ### @props
 
 Use the `@props` macro in a spec file to allow multiple fields with arbitrary names. Pass a regex to restrict the format of the names.
