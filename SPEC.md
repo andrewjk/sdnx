@@ -6,6 +6,8 @@ Each code block in this file contains a schema, some data, and the optional expe
 
 ## Introduction
 
+Structured Data Notation files have an extension of `.sdn`, and schema files have an extension of `.sdnx`.
+
 Data is structured within objects (sets of fields) or arrays (collections of data).
 
 Objects are delimited with `{` and `}` and arrays are delimited with `[` and `]`.
@@ -623,13 +625,13 @@ Objects can be nested within arrays:
 
 There are some helper macros available for advanced functionality. Macros start with an `@`.
 
-### @spec
+### @schema
 
-Use the `@spec` macro to link to a spec file, either as a local file, or from a URL.
+Use the `@schema` macro to link to a schema file from a data file, either as a local file, or from a URL.
 
 ### @mix
 
-Use the `@mix` macro in a spec file to mix fields into your schema.
+Use the `@mix` macro in a schema file to mix fields into your schema.
 
 ```````````````````````````````` example
 { dob: int | date }
@@ -692,7 +694,7 @@ Mix can have more than two alternatives:
 
 ### @def
 
-Use the `@def` macro in a spec file to define reusable schema patterns. Definitions can be referenced with `@mix` to avoid repetition and enable recursive schemas.
+Use the `@def` macro in a schema file to define reusable schema patterns. Definitions can be referenced with `@mix` to avoid repetition and enable recursive schemas.
 
 ```````````````````````````````` example
 {
@@ -774,7 +776,7 @@ Error: 'role' must be 'admin' & Field not found: level | 'role' must be 'user'
 
 ### @props
 
-Use the `@props` macro in a spec file to allow multiple fields with arbitrary names. Pass a regex to restrict the format of the names.
+Use the `@props` macro in a schema file to allow multiple fields with arbitrary names. Pass a regex to restrict the format of the names.
 
 ```````````````````````````````` example
 { @props(): string }
