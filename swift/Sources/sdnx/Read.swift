@@ -13,8 +13,8 @@ public func read(_ file: String, schema: Any? = nil) throws -> ReadResult {
     switch parsed {
     case .failure(let failure):
         return .failure(ReadFailure(
-            schemaErrors: failure.errors.map { buildReadError($0, contents: contents) },
-            dataErrors: [],
+            schemaErrors: [],
+            dataErrors: failure.errors.map { buildReadError($0, contents: contents) },
             checkErrors: []
         ))
     case .success(let success):

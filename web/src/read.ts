@@ -28,8 +28,8 @@ export default function read(file: string, schema?: string | Schema): ReadSucces
 	if (!parsed.ok) {
 		return {
 			ok: false,
-			schemaErrors: parsed.errors.map((e) => buildReadError(e, contents)),
-			dataErrors: [],
+			schemaErrors: [],
+			dataErrors: parsed.errors.map((e) => buildReadError(e, contents)),
 			checkErrors: [],
 		};
 	}

@@ -145,8 +145,8 @@ test "read: fails with data parse errors" {
     defer result.deinit();
 
     try std.testing.expect(!result.ok);
-    try std.testing.expect(result.schemaErrors.items.len > 0);
-    try std.testing.expect(result.dataErrors.items.len == 0);
+    try std.testing.expect(result.schemaErrors.items.len == 0);
+    try std.testing.expect(result.dataErrors.items.len > 0);
     try std.testing.expect(result.checkErrors.items.len == 0);
 }
 
@@ -308,8 +308,8 @@ test "read: includes line and char info in parse errors" {
     defer result.deinit();
 
     try std.testing.expect(!result.ok);
-    try std.testing.expect(result.schemaErrors.items.len > 0);
-    const err = result.schemaErrors.items[0];
+    try std.testing.expect(result.dataErrors.items.len > 0);
+    const err = result.dataErrors.items[0];
     try std.testing.expect(err.line.len > 0);
     try std.testing.expect(err.message.len > 0);
     try std.testing.expect(err.index > 0);

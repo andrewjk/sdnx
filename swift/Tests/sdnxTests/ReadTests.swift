@@ -134,7 +134,7 @@ import Collections
         case .success:
             #expect(Bool(false), "Expected failure but got success")
         case .failure(let failure):
-            #expect(!failure.schemaErrors.isEmpty || !failure.dataErrors.isEmpty)
+            #expect(!failure.dataErrors.isEmpty)
         }
     }
     
@@ -329,8 +329,8 @@ import Collections
         case .success:
             #expect(Bool(false), "Expected failure but got success")
         case .failure(let failure):
-            #expect(!failure.schemaErrors.isEmpty || !failure.dataErrors.isEmpty)
-            let errors = failure.schemaErrors.isEmpty ? failure.dataErrors : failure.schemaErrors
+            #expect(!failure.dataErrors.isEmpty)
+            let errors = failure.dataErrors
             if let error = errors.first {
                 #expect(!error.line.isEmpty)
                 #expect(error.char >= 0)

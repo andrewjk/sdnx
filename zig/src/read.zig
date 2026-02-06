@@ -121,7 +121,7 @@ pub fn read(io: std.Io, allocator: Allocator, file_path: []const u8, schema_in: 
     if (!parsed.ok) {
         for (parsed.errors.items) |err| {
             const read_err = try buildReadError(allocator, err, data_contents);
-            try result.schemaErrors.append(allocator, read_err);
+            try result.dataErrors.append(allocator, read_err);
         }
         allocator.free(contents);
         return result;

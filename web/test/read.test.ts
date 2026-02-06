@@ -98,10 +98,10 @@ test("read: fails with data parse errors", () => {
 
 	expect(result.ok).toBe(false);
 	if (!result.ok) {
-		expect(result.schemaErrors.length).toBeGreaterThan(0);
-		expect(result.dataErrors).toHaveLength(0);
+		expect(result.schemaErrors).toHaveLength(0);
+		expect(result.dataErrors.length).toBeGreaterThan(0);
 		expect(result.checkErrors).toHaveLength(0);
-		expect(result.schemaErrors[0].message).toBeDefined();
+		expect(result.dataErrors[0].message).toBeDefined();
 	}
 });
 
@@ -243,8 +243,8 @@ age: invalid
 
 	expect(result.ok).toBe(false);
 	if (!result.ok) {
-		expect(result.schemaErrors.length).toBeGreaterThan(0);
-		const error = result.schemaErrors[0];
+		expect(result.dataErrors.length).toBeGreaterThan(0);
+		const error = result.dataErrors[0];
 		expect(error.line).toBeDefined();
 		expect(error.char).toBeDefined();
 		expect(error.index).toBeDefined();
