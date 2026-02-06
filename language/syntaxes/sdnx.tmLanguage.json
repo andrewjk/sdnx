@@ -1,0 +1,190 @@
+{
+	"name": "SDNX",
+	"scopeName": "source.sdnx",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#macros"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#dates"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#types"
+		},
+		{
+			"include": "#validation"
+		},
+		{
+			"include": "#identifiers"
+		},
+		{
+			"include": "#punctuation"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.description.sdnx",
+					"match": "^\\s*##.*$",
+					"captures": {
+						"0": { "name": "punctuation.definition.comment.sdnx" }
+					}
+				},
+				{
+					"name": "comment.line.number-sign.sdnx",
+					"match": "#.*$",
+					"captures": {
+						"0": { "name": "punctuation.definition.comment.sdnx" }
+					}
+				}
+			]
+		},
+		"macros": {
+			"patterns": [
+				{
+					"name": "keyword.control.macro.sdnx",
+					"match": "@(mix|def|props)\\b"
+				}
+			]
+		},
+		"strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.sdnx",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.sdnx",
+							"match": "\\\\."
+						}
+					]
+				}
+			]
+		},
+		"dates": {
+			"patterns": [
+				{
+					"name": "constant.other.datetime.sdnx",
+					"match": "\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2})?([UL]|[+-]\\d{2}:\\d{2})?\\b"
+				},
+				{
+					"name": "constant.other.date.sdnx",
+					"match": "\\b\\d{4}-\\d{2}-\\d{2}\\b"
+				},
+				{
+					"name": "constant.other.time.sdnx",
+					"match": "\\b\\d{2}:\\d{2}(:\\d{2})?\\b"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.hex.sdnx",
+					"match": "\\b0[xX][0-9a-fA-F_]+\\b"
+				},
+				{
+					"name": "constant.numeric.float.sdnx",
+					"match": "\\b[+-]?(?:\\d[\\d_]*\\.\\d[\\d_]*|\\d[\\d_]*\\.)(?:[eE][+-]?\\d[\\d_]*)?\\b"
+				},
+				{
+					"name": "constant.numeric.float.sdnx",
+					"match": "\\b[+-]?\\d[\\d_]*[eE][+-]?\\d[\\d_]*\\b"
+				},
+				{
+					"name": "constant.numeric.integer.sdnx",
+					"match": "\\b[+-]?\\d[\\d_]*\\b"
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"name": "constant.language.boolean.sdnx",
+					"match": "\\b(true|false)\\b"
+				},
+				{
+					"name": "constant.language.null.sdnx",
+					"match": "\\b(null|undef)\\b"
+				}
+			]
+		},
+		"types": {
+			"patterns": [
+				{
+					"name": "storage.type.sdnx",
+					"match": "\\b(bool|int|num|date|string)\\b"
+				}
+			]
+		},
+		"validation": {
+			"patterns": [
+				{
+					"name": "support.function.validation.sdnx",
+					"match": "\\b(min|max|minlen|maxlen|pattern|unique)\\b"
+				},
+				{
+					"name": "string.regexp.sdnx",
+					"begin": "/",
+					"end": "/[a-zA-Z]*",
+					"patterns": [
+						{
+							"name": "constant.character.escape.sdnx",
+							"match": "\\\\."
+						}
+					]
+				}
+			]
+		},
+		"identifiers": {
+			"patterns": [
+				{
+					"name": "variable.other.property.sdnx",
+					"match": "[a-zA-Z_][a-zA-Z0-9_]*\\b"
+				}
+			]
+		},
+		"punctuation": {
+			"patterns": [
+				{
+					"name": "punctuation.brace.curly.sdnx",
+					"match": "[{}]"
+				},
+				{
+					"name": "punctuation.brace.square.sdnx",
+					"match": "[\\[\\]]"
+				},
+				{
+					"name": "punctuation.brace.round.sdnx",
+					"match": "[()]"
+				},
+				{
+					"name": "punctuation.separator.key-value.sdnx",
+					"match": ":"
+				},
+				{
+					"name": "punctuation.separator.comma.sdnx",
+					"match": ","
+				},
+				{
+					"name": "keyword.operator.union.sdnx",
+					"match": "\\|"
+				}
+			]
+		}
+	}
+}

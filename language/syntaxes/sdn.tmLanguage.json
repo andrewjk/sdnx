@@ -1,0 +1,153 @@
+{
+	"name": "SDN",
+	"scopeName": "source.sdn",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#directives"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#dates"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#identifiers"
+		},
+		{
+			"include": "#punctuation"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.description.sdn",
+					"match": "^\\s*##.*$",
+					"captures": {
+						"0": { "name": "punctuation.definition.comment.sdn" }
+					}
+				},
+				{
+					"name": "comment.line.number-sign.sdn",
+					"match": "#.*$",
+					"captures": {
+						"0": { "name": "punctuation.definition.comment.sdn" }
+					}
+				}
+			]
+		},
+		"directives": {
+			"patterns": [
+				{
+					"name": "keyword.control.directive.sdn",
+					"match": "@schema\\b"
+				}
+			]
+		},
+		"strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.sdn",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.sdn",
+							"match": "\\\\."
+						}
+					]
+				}
+			]
+		},
+		"dates": {
+			"patterns": [
+				{
+					"name": "constant.other.datetime.sdn",
+					"match": "\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2})?([UL]|[+-]\\d{2}:\\d{2})?\\b"
+				},
+				{
+					"name": "constant.other.date.sdn",
+					"match": "\\b\\d{4}-\\d{2}-\\d{2}\\b"
+				},
+				{
+					"name": "constant.other.time.sdn",
+					"match": "\\b\\d{2}:\\d{2}(:\\d{2})?\\b"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.hex.sdn",
+					"match": "\\b0[xX][0-9a-fA-F_]+\\b"
+				},
+				{
+					"name": "constant.numeric.float.sdn",
+					"match": "\\b[+-]?(?:\\d[\\d_]*\\.\\d[\\d_]*|\\d[\\d_]*\\.)(?:[eE][+-]?\\d[\\d_]*)?\\b"
+				},
+				{
+					"name": "constant.numeric.float.sdn",
+					"match": "\\b[+-]?\\d[\\d_]*[eE][+-]?\\d[\\d_]*\\b"
+				},
+				{
+					"name": "constant.numeric.integer.sdn",
+					"match": "\\b[+-]?\\d[\\d_]*\\b"
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"name": "constant.language.boolean.sdn",
+					"match": "\\b(true|false)\\b"
+				},
+				{
+					"name": "constant.language.null.sdn",
+					"match": "\\b(null|undef)\\b"
+				}
+			]
+		},
+		"identifiers": {
+			"patterns": [
+				{
+					"name": "variable.other.property.sdn",
+					"match": "[a-zA-Z_][a-zA-Z0-9_]*\\b"
+				}
+			]
+		},
+		"punctuation": {
+			"patterns": [
+				{
+					"name": "punctuation.brace.curly.sdn",
+					"match": "[{}]"
+				},
+				{
+					"name": "punctuation.brace.square.sdn",
+					"match": "[\\[\\]]"
+				},
+				{
+					"name": "punctuation.separator.key-value.sdn",
+					"match": ":"
+				},
+				{
+					"name": "punctuation.separator.comma.sdn",
+					"match": ","
+				},
+				{
+					"name": "keyword.operator.union.sdn",
+					"match": "\\|"
+				}
+			]
+		}
+	}
+}

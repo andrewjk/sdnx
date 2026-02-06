@@ -1,0 +1,4 @@
+@schema("./hover.sdnx")
+{
+	skills: "test"
+}
