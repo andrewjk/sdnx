@@ -12,12 +12,19 @@ import { accept, expect, trim } from "./utils";
  */
 export default function parse(
 	input: string,
+	mapped = false,
 ): ParseSuccess<Record<PropertyKey, any>> | ParseFailure {
 	let status: ParseStatus = {
 		input,
 		i: 0,
 		errors: [],
+		mapped,
 	};
+
+	if (mapped) {
+		status.path = [];
+		status.mapping = {};
+	}
 
 	trim(status);
 
@@ -40,6 +47,7 @@ export default function parse(
 				return {
 					ok: true,
 					data,
+					mapping: status.mapping,
 				};
 			} else {
 				return { ok: false, errors: status.errors };
@@ -92,6 +100,7 @@ function parseObject(status: ParseStatus) {
 function parseArray(status: ParseStatus) {
 	let result: any[] = [];
 	const start = status.i;
+	let index = 0;
 	while (true) {
 		trim(status);
 		if (accept("]", status)) {
@@ -108,7 +117,24 @@ function parseArray(status: ParseStatus) {
 			trim(status);
 		}
 
+		if (status.mapped) {
+			status.path!.push(`${index++}`);
+			trim(status);
+		}
+
+		const valueStart = status.i;
 		const value = parseValue(status);
+
+		if (status.mapped) {
+			status.mapping![status.path!.join(".")] = {
+				nameIndex: 0,
+				nameLength: 0,
+				valueIndex: valueStart,
+				valueLength: status.i - valueStart,
+			};
+			status.path!.pop();
+		}
+
 		result.push(value);
 	}
 	return result;
@@ -149,7 +175,25 @@ function parseField(result: Record<PropertyKey, any>, status: ParseStatus) {
 	trim(status);
 	expect(":", status);
 
-	result[name] = parseValue(status);
+	if (status.mapped) {
+		status.path!.push(name);
+		trim(status);
+	}
+
+	const valueStart = status.i;
+	const value = parseValue(status);
+
+	if (status.mapped) {
+		status.mapping![status.path!.join(".")] = {
+			nameIndex: start,
+			nameLength: name.length,
+			valueIndex: valueStart,
+			valueLength: status.i - valueStart,
+		};
+		status.path!.pop();
+	}
+
+	result[name] = value;
 }
 
 function parseValue(status: ParseStatus) {
